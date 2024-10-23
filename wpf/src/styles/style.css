@@ -1,0 +1,12 @@
+body {
+    margin: 0;
+}
+
+.sketch {
+    display: flex;
+    width: 100svw;
+    height: 100svh;
+
+    align-items: center;
+    justify-content: center;
+}

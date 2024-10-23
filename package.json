@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "name": "ourProjeckt",
+  "devDependencies": {
+  },
+  "workspaces": [
+    "wpf",
+    "wasp"
+  ]
+}
