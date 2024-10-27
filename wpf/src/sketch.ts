@@ -1,4 +1,4 @@
-import p5 from 'p5';
+import p5 from "p5";
 const width = window.innerWidth;
 const height = window.innerHeight;
 let rotate = 1;
