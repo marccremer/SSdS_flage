@@ -1,8 +1,10 @@
 {
   "private": true,
   "name": "ourProjeckt",
-  "devDependencies": {
+  "scripts": {
+    "wpf:dev": "yarn workspace wpf dev"
   },
+  "devDependencies": {},
   "workspaces": [
     "wpf",
     "wasp"
