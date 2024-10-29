@@ -132,7 +132,7 @@ export class Physics
       const [position, movement, gravity, spring] = entity;
       /**
        * TODO: Caclulate Spring force and force vector [f=-K*x * -(p-anchor)]
-       * distance is x= magnitude
+       * distance is x= magnitude -restlength
        */
       const springForce = 1;
       position.pos = addVec2d(position.pos, movement.velocity);
