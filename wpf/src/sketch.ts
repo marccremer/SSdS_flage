@@ -1,8 +1,18 @@
 import p5 from "p5";
+import { Particle, Physics } from "./physics";
 const width = window.innerWidth;
 const height = window.innerHeight;
 let rotate = 1;
 const rotationRate = 0.01;
+
+const particels = [1, 1, 1, 1].map(() => {
+  return new Particle(
+    [Math.random() * 50, Math.random() * 30],
+    Math.random() * 20
+  );
+});
+
+const physics = new Physics();
 const sketch = (p: p5) => {
   const b = p.color(255, 255, 255);
   p.setup = () => {
@@ -13,20 +23,14 @@ const sketch = (p: p5) => {
   p.draw = () => {
     p.background(b);
     p.translate(width / 2, height / 2);
-    let size = 600;
-    const n = 24;
-    const step = size / n;
-    p.rotate(p.QUARTER_PI * rotate);
-    const move = -(size / 2);
-
-    for (let i = 0; i <= n; i++) {
-      let c = p.color(240, 204, 0);
-      p.fill(c);
-      p.square(move, move, size, 0, 0, 0, 0);
-      p.rotate(p.QUARTER_PI * rotate);
-      size -= step;
+    let c = p.color(240, 204, 0);
+    p.fill(c);
+    for (const particle of particels) {
+      const [x, y] = particle.components[0].pos;
+      p.square(x, y, 20);
     }
-    rotate += rotationRate * 0.2;
+    const components = particels.map((e) => e.components);
+    physics.process(components);
   };
 };
 
