@@ -1,47 +1,67 @@
+import p5 from 'p5';
+
 interface Component<N extends string> {
   name: N;
 }
 
-interface PositionComponent extends Component<"position"> {
+export interface PositionComponent extends Component<'position'> {
   pos: Vec2d;
 }
-interface MovementComponent extends Component<"movement"> {
+export interface MovementComponent extends Component<'movement'> {
   velocity: Vec2d;
   accelaration: Vec2d;
 }
-interface GravityComponent extends Component<"gravity"> {
-  gravityConstant: 1.1;
+export interface GravityComponent extends Component<'gravity'> {
+  gravityConstant: number;
   mass: number;
 }
 
 // Hooks law Fspring = -K * extensions
-interface SpringComponent extends Component<"spring"> {
-  springPartner: Vec2d;
+export interface SpringComponent extends Component<'spring'> {
+  springPartner: PositionComponent[];
+  springAnchor: PositionComponent;
   springConstant: number;
   restLength: number;
 }
 export class Particle {
-  components: [PositionComponent, MovementComponent, GravityComponent];
-  constructor(position: Vec2d, mass: number) {
+  components: [
+    PositionComponent,
+    MovementComponent,
+    GravityComponent,
+    SpringComponent
+  ];
+  constructor(
+    position: PositionComponent,
+    mass: number,
+    Spring: SpringComponent
+  ) {
     this.components = [
-      { name: "position", pos: position },
-      { name: "movement", accelaration: [0, 0], velocity: [0, 0] },
-      { gravityConstant: 1.1, mass, name: "gravity" },
+      position,
+      { name: 'movement', accelaration: [0, 0], velocity: [0, 0] },
+      { gravityConstant: 9.8, mass, name: 'gravity' },
+      Spring,
     ];
   }
+}
+
+interface Beaviour<ComponentA extends Component<any>> {
+  process(cmps: [ComponentA][], deltaTime: number): void;
 }
 interface Beaviour2<
   ComponentA extends Component<any>,
   ComponentB extends Component<any>
 > {
-  process(cmps: [ComponentA, ComponentB][]): void;
+  process(cmps: [ComponentA, ComponentB][], deltaTime: number): void;
 }
 interface Beaviour3<
   ComponentA extends Component<any>,
   ComponentB extends Component<any>,
   ComponentC extends Component<any>
 > {
-  process(cmps: [ComponentA, ComponentB, ComponentC][]): void;
+  process(
+    cmps: [ComponentA, ComponentB, ComponentC][],
+    deltaTime: number
+  ): void;
 }
 interface Beaviour4<
   ComponentA extends Component<any>,
@@ -49,7 +69,10 @@ interface Beaviour4<
   ComponentC extends Component<any>,
   ComponentD extends Component<any>
 > {
-  process(cmps: [ComponentA, ComponentB, ComponentC, ComponentD][]): void;
+  process(
+    cmps: [ComponentA, ComponentB, ComponentC, ComponentD][],
+    deltaTime: number
+  ): void;
 }
 interface Beaviour5<
   ComponentA extends Component<any>,
@@ -59,7 +82,8 @@ interface Beaviour5<
   ComponentE extends Component<any>
 > {
   process(
-    cmps: [ComponentA, ComponentB, ComponentC, ComponentD, ComponentE][]
+    cmps: [ComponentA, ComponentB, ComponentC, ComponentD, ComponentE][],
+    deltaTime: number
   ): void;
 }
 
@@ -71,16 +95,17 @@ interface PhysicsObject {
 const gpu = new GPU.GPU();
 
 export function addVec2d(a: Vec2d, b: Vec2d): Vec2d {
-  const addVec2dKernel = gpu
-    .createKernel<[Vec2d, Vec2d], {}>(function (a, b) {
-      return a[this.thread.x] + b[this.thread.x];
-    })
-    .setOutput([2]);
-
-  return addVec2dKernel(a, b) as Vec2d;
+  return [a[0] + b[0], a[1] + b[1]];
+}
+export function subVec2d(a: Vec2d, b: Vec2d): Vec2d {
+  return [a[0] - b[0], a[1] - b[1]];
 }
 
-export function normalizeVec2d(vec: Vec2d) {
+export function scaleVec2d(vec: Vec2d, scale: number): Vec2d {
+  return [vec[0] * scale, vec[1] * scale];
+}
+
+/* export function normalizeVec2d(vec: Vec2d) {
   const normalizeKernel = gpu.createKernelMap<[Vec2d], { magnitude: number }>(
     {
       magnitude: function (v: Vec2d) {
@@ -88,7 +113,8 @@ export function normalizeVec2d(vec: Vec2d) {
       },
     },
     function (vec) {
-      const mag = this.constants.magnitude || 1;
+      let mag = this.constants.magnitude;
+      if (mag) mag = 1;
       if (mag === 0) return 0; // Avoid division by zero for zero vector
       return vec[this.thread.x] / mag;
     },
@@ -105,40 +131,94 @@ export function normalizeVec2d(vec: Vec2d) {
     result,
     magnitude,
   };
+} */
+
+function normalizeVec2d(vec: Vec2d): { magnitude: number; result: Vec2d } {
+  const [x, y] = vec;
+  const magnitude = Math.sqrt(x * x + y * y);
+
+  // Check to avoid division by zero
+  if (magnitude === 0) {
+    return { magnitude: 0, result: [0, 0] };
+  }
+
+  const result: Vec2d = [x / magnitude, y / magnitude];
+  return { magnitude, result };
 }
+const friction = 0.992;
 
 export class Physics
-  implements
-    Beaviour4<
-      PositionComponent,
-      MovementComponent,
-      GravityComponent,
-      SpringComponent
-    >
+  implements Beaviour3<PositionComponent, MovementComponent, GravityComponent>
 {
   gpu: GPU.GPU;
   constructor() {
     this.gpu = new GPU.GPU();
   }
   process(
-    cmps: [
-      PositionComponent,
-      MovementComponent,
-      GravityComponent,
-      SpringComponent
-    ][]
+    cmps: [PositionComponent, MovementComponent, GravityComponent][],
+    deltaTime: number
   ): void {
     for (const entity of cmps) {
-      const [position, movement, gravity, spring] = entity;
-      /**
-       * TODO: Caclulate Spring force and force vector [f=-K*x * -(p-anchor)]
-       * distance is x= magnitude -restlength
-       */
-      const springForce = 1;
+      const [position, movement, gravity] = entity;
       position.pos = addVec2d(position.pos, movement.velocity);
+
+      performance.mark('start-pgrav');
       movement.velocity = addVec2d(movement.velocity, movement.accelaration);
-      const force = gravity.gravityConstant / gravity.mass;
-      movement.accelaration = addVec2d([0, force], movement.accelaration);
+      const gravityForce = gravity.gravityConstant;
+      movement.velocity = addVec2d(
+        [0, gravityForce * deltaTime],
+        movement.velocity
+      );
+      performance.mark('end-pgrav');
+      performance.measure('pgrav', 'start-pgrav', 'end-pgrav');
+      movement.velocity = scaleVec2d(movement.velocity, friction);
+    }
+    const pgrav = performance
+      .getEntriesByName('pgrav')
+      .reduce((prev, cur) => prev + cur.duration, 0);
+    const pspring = performance
+      .getEntriesByName('pspring')
+      .reduce((prev, cur) => prev + cur.duration, 0);
+  }
+}
+
+export class Springs implements Beaviour2<MovementComponent, SpringComponent> {
+  gpu: GPU.GPU;
+  constructor() {
+    this.gpu = new GPU.GPU();
+  }
+  process(
+    cmps: [MovementComponent, SpringComponent][],
+    deltaTime: number
+  ): void {
+    for (const entity of cmps) {
+      const [movement, spring] = entity;
+      const partners = spring.springPartner;
+      const totalSpringForce: Vec2d[] = [];
+      for (const { pos } of partners) {
+        let force = subVec2d(spring.springAnchor.pos, pos);
+        let { magnitude: extensionLength, result: extensionDirection } =
+          normalizeVec2d(force);
+        // Calculate the extension amount (distance from rest length)
+        let x =
+          spring.restLength < extensionLength
+            ? extensionLength - spring.restLength
+            : 0;
+
+        // Calculate the spring force based on Hooke's Law: F = -k * x
+        const springForce = scaleVec2d(
+          extensionDirection,
+          -1 * spring.springConstant * x * deltaTime
+        );
+        // console.log('length', pos, spring.springAnchor.pos, extensionLength);
+        totalSpringForce.push(springForce);
+      }
+      let appliedForce: Vec2d = [0, 0];
+      for (const F of totalSpringForce) {
+        appliedForce = addVec2d(appliedForce, F);
+      }
+      movement.velocity = addVec2d(appliedForce, movement.velocity);
+      movement.velocity = scaleVec2d(movement.velocity, friction - 0.1);
     }
   }
 }
