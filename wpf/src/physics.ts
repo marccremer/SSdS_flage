@@ -19,17 +19,23 @@ export interface GravityComponent extends Component<'gravity'> {
 // Hooks law Fspring = -K * extensions
 export interface SpringComponent extends Component<'spring'> {
   springPartner: PositionComponent[];
+  extensions: number[];
   springAnchor: PositionComponent;
   springConstant: number;
   restLength: number;
 }
+type ParticleComponents = [
+  PositionComponent,
+  MovementComponent,
+  GravityComponent,
+  SpringComponent
+];
+type ParticleComponent = ParticleComponents[number];
+
+type ParticleComponentsNames = ParticleComponent['name'];
+
 export class Particle {
-  components: [
-    PositionComponent,
-    MovementComponent,
-    GravityComponent,
-    SpringComponent
-  ];
+  components: ParticleComponents;
   constructor(
     position: PositionComponent,
     mass: number,
@@ -41,6 +47,31 @@ export class Particle {
       { gravityConstant: 9.8, mass, name: 'gravity' },
       Spring,
     ];
+  }
+  getComponent<N extends ParticleComponentsNames>(
+    name: N
+  ): N extends 'position'
+    ? PositionComponent
+    : N extends 'movement'
+    ? MovementComponent
+    : N extends 'gravity'
+    ? GravityComponent
+    : N extends 'spring'
+    ? SpringComponent
+    : never {
+    switch (name) {
+      case 'position':
+        // Hack to get return type working
+        return this.components[0] as any;
+      case 'movement':
+        return this.components[1] as any;
+      case 'gravity':
+        return this.components[2] as any;
+      case 'spring':
+        return this.components[3] as any;
+      default:
+        throw new Error(`Invalid name ${name}`);
+    }
   }
 }
 
@@ -195,10 +226,13 @@ export class Springs implements Beaviour2<MovementComponent, SpringComponent> {
       const [movement, spring] = entity;
       const partners = spring.springPartner;
       const totalSpringForce: Vec2d[] = [];
-      for (const { pos } of partners) {
+      for (let index = 0; index < partners.length; index++) {
+        const { pos } = partners[index];
+
         let force = subVec2d(spring.springAnchor.pos, pos);
         let { magnitude: extensionLength, result: extensionDirection } =
           normalizeVec2d(force);
+
         // Calculate the extension amount (distance from rest length)
         let x =
           spring.restLength < extensionLength
@@ -210,7 +244,8 @@ export class Springs implements Beaviour2<MovementComponent, SpringComponent> {
           extensionDirection,
           -1 * spring.springConstant * x * deltaTime
         );
-        // console.log('length', pos, spring.springAnchor.pos, extensionLength);
+
+        spring.extensions[index] = extensionLength;
         totalSpringForce.push(springForce);
       }
       let appliedForce: Vec2d = [0, 0];
@@ -221,4 +256,11 @@ export class Springs implements Beaviour2<MovementComponent, SpringComponent> {
       movement.velocity = scaleVec2d(movement.velocity, friction - 0.1);
     }
   }
+}
+
+export function generateRandomPosition(): PositionComponent {
+  return {
+    name: 'position',
+    pos: [Math.random() * 50, Math.random() * 30],
+  };
 }

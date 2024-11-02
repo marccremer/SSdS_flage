@@ -1,5 +1,6 @@
 import p5 from 'p5';
 import {
+  generateRandomPosition,
   GravityComponent,
   MovementComponent,
   Particle,
@@ -12,54 +13,52 @@ import { pageState } from './shared';
 const width = window.innerWidth;
 const height = window.innerHeight;
 
-const particels: Particle[] = [];
-const flagAnchor1: PositionComponent = { name: 'position', pos: [20, -20] };
-const flagAnchor2: PositionComponent = { name: 'position', pos: [-10, -20] };
-const N = 15;
-const SHIRT_WIDTH = 4;
-const SHIRT_HEIGHT = N % SHIRT_WIDTH;
-const springConstant = 0.5;
-for (let n = 0; n < N; n++) {
-  if (n === 0 || n === SHIRT_WIDTH) {
-    const poscmp: PositionComponent = {
-      name: 'position',
-      pos: [Math.random() * 50, Math.random() * 30],
-    };
-    const p = new Particle(poscmp, Math.random() * 20, {
-      name: 'spring',
-      restLength: 4,
-      springConstant,
-      springPartner: [flagAnchor1],
-      springAnchor: poscmp,
-    });
-    particels.push(p);
-  } else {
-    const partnerIndex = n - 1;
-    const prev = particels[partnerIndex].components[0] || {
-      name: 'position',
-      pos: [20, 10],
-    };
-    const poscomp: PositionComponent = {
-      name: 'position',
-      pos: [Math.random() * 50, Math.random() * 30],
-    };
-    const springPartners = [n === N - 1 ? flagAnchor2 : prev];
-    if (n >= SHIRT_WIDTH) {
-      const upperIndex = n % SHIRT_WIDTH;
-      const upperPartner = particels[upperIndex].components[0] || {
-        name: 'position',
-        pos: [20, 10],
-      };
-      springPartners.push(upperPartner);
+const particles: Particle[] = [];
+const flagAnchor1: PositionComponent = { name: 'position', pos: [200, -100] };
+const flagAnchor2: PositionComponent = { name: 'position', pos: [-100, -100] };
+const N = 50;
+const SHIRT_WIDTH = 10;
+const SHIRT_HEIGHT = Math.ceil(N / SHIRT_WIDTH);
+const springConstant = 1.2;
+
+for (let row = 0; row < SHIRT_HEIGHT; row++) {
+  for (let col = 0; col < SHIRT_WIDTH; col++) {
+    const particlePositionCmp: PositionComponent = generateRandomPosition();
+    const springPartners: PositionComponent[] = [];
+
+    if (row == 0 && col === SHIRT_WIDTH - 1) {
+      springPartners.push(flagAnchor1);
     }
-    const p = new Particle(poscomp, Math.random() * 20, {
+    if (row > 0) {
+      const aboveIndex = (row - 1) * SHIRT_WIDTH + col;
+      const aboveParticle = particles[aboveIndex];
+      const abovePosition = aboveParticle.components[0] as PositionComponent;
+      springPartners.push(abovePosition);
+      const springCmp = aboveParticle.getComponent('spring');
+      springCmp.springPartner.push(particlePositionCmp);
+    }
+    if (col > 0) {
+      const leftIndex = row * SHIRT_WIDTH + (col - 1);
+      const leftParticle = particles[leftIndex];
+      const leftPosition = leftParticle.components[0] as PositionComponent;
+      springPartners.push(leftPosition);
+      const springCmp = leftParticle.getComponent('spring');
+      springCmp.springPartner.push(particlePositionCmp);
+    }
+
+    if (row === 0 && col === 0) {
+      springPartners.push(flagAnchor2);
+    }
+
+    const p = new Particle(particlePositionCmp, Math.random() * 20, {
       name: 'spring',
       restLength: 5,
       springConstant,
       springPartner: springPartners,
-      springAnchor: poscomp,
+      springAnchor: particlePositionCmp,
+      extensions: [],
     });
-    particels.push(p);
+    particles.push(p);
   }
 }
 let pause = false;
@@ -77,18 +76,30 @@ const sketch = (p: p5) => {
     p.background(b);
     p.translate(width / 2, height / 2);
     let c = p.color(240, 204, 0);
+    let c2 = p.color(200, 200, 0);
+    let odd = true;
     p.fill(c);
-    for (const particle of particels) {
+    for (const particle of particles) {
       const [x, y] = particle.components[0].pos;
       p.circle(x, y, 20);
-      const partners = particle.components[3].springPartner;
-      for (const {
-        pos: [x2, y2],
-      } of partners) {
+      const springCmp = particle.components[3];
+      const partners = springCmp.springPartner;
+
+      for (let index = 0; index < partners.length; index++) {
+        const partner = partners[index];
+        const [x2, y2] = partner.pos;
+        odd = !odd;
+        if (odd) {
+          p.fill(c);
+        } else {
+          p.fill(c2);
+        }
         p.line(x, y, x2, y2);
+        const text = springCmp.extensions[index];
+        // p.text('extension ' + Math.ceil(text), x, y);
       }
     }
-    const components = particels.map((e) => e.components);
+    const components = particles.map((e) => e.components);
     const pyhsComponents = components.map((comps) => {
       return comps.filter((el) => el.name !== 'spring') as [
         PositionComponent,
@@ -102,8 +113,10 @@ const sketch = (p: p5) => {
       return [mComps, sComps] as [MovementComponent, SpringComponent];
     });
     const pdelta = p.deltaTime / 100;
-    springs.process(springcomponents, pdelta);
-    physics.process(pyhsComponents, pdelta);
+    if (p.deltaTime > 10) {
+      physics.process(pyhsComponents, pdelta);
+      springs.process(springcomponents, pdelta);
+    }
   };
 };
 
