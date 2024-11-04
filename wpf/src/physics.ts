@@ -1,23 +1,23 @@
-import p5 from 'p5';
+import p5 from "p5";
+import { PhysicConstants, physicConstants } from "./shared";
 
 interface Component<N extends string> {
   name: N;
 }
 
-export interface PositionComponent extends Component<'position'> {
+export interface PositionComponent extends Component<"position"> {
   pos: Vec2d;
 }
-export interface MovementComponent extends Component<'movement'> {
+export interface MovementComponent extends Component<"movement"> {
   velocity: Vec2d;
   accelaration: Vec2d;
 }
-export interface GravityComponent extends Component<'gravity'> {
-  gravityConstant: number;
+export interface GravityComponent extends Component<"gravity"> {
   mass: number;
 }
 
 // Hooks law Fspring = -K * extensions
-export interface SpringComponent extends Component<'spring'> {
+export interface SpringComponent extends Component<"spring"> {
   springPartner: PositionComponent[];
   extensions: number[];
   springAnchor: PositionComponent;
@@ -32,7 +32,7 @@ type ParticleComponents = [
 ];
 type ParticleComponent = ParticleComponents[number];
 
-type ParticleComponentsNames = ParticleComponent['name'];
+type ParticleComponentsNames = ParticleComponent["name"];
 
 export class Particle {
   components: ParticleComponents;
@@ -43,31 +43,31 @@ export class Particle {
   ) {
     this.components = [
       position,
-      { name: 'movement', accelaration: [0, 0], velocity: [0, 0] },
-      { gravityConstant: 9.8, mass, name: 'gravity' },
+      { name: "movement", accelaration: [0, 0], velocity: [0, 0] },
+      { mass, name: "gravity" },
       Spring,
     ];
   }
   getComponent<N extends ParticleComponentsNames>(
     name: N
-  ): N extends 'position'
+  ): N extends "position"
     ? PositionComponent
-    : N extends 'movement'
+    : N extends "movement"
     ? MovementComponent
-    : N extends 'gravity'
+    : N extends "gravity"
     ? GravityComponent
-    : N extends 'spring'
+    : N extends "spring"
     ? SpringComponent
     : never {
     switch (name) {
-      case 'position':
+      case "position":
         // Hack to get return type working
         return this.components[0] as any;
-      case 'movement':
+      case "movement":
         return this.components[1] as any;
-      case 'gravity':
+      case "gravity":
         return this.components[2] as any;
-      case 'spring':
+      case "spring":
         return this.components[3] as any;
       default:
         throw new Error(`Invalid name ${name}`);
@@ -118,7 +118,7 @@ interface Beaviour5<
   ): void;
 }
 
-type Vec2d = [x: number, y: number];
+export type Vec2d = [x: number, y: number];
 
 interface PhysicsObject {
   position: Vec2d;
@@ -176,47 +176,51 @@ function normalizeVec2d(vec: Vec2d): { magnitude: number; result: Vec2d } {
   const result: Vec2d = [x / magnitude, y / magnitude];
   return { magnitude, result };
 }
-const friction = 0.992;
 
 export class Physics
   implements Beaviour3<PositionComponent, MovementComponent, GravityComponent>
 {
   gpu: GPU.GPU;
-  constructor() {
+  constants: { gravity: number };
+  constructor(constants: PhysicConstants) {
     this.gpu = new GPU.GPU();
+    this.constants = constants;
   }
   process(
     cmps: [PositionComponent, MovementComponent, GravityComponent][],
     deltaTime: number
   ): void {
     for (const entity of cmps) {
-      const [position, movement, gravity] = entity;
+      const [position, movement] = entity;
+      console.assert(
+        !isNaN(movement.velocity[0]),
+        "velocity should not be NaN" + JSON.stringify(movement)
+      );
       position.pos = addVec2d(position.pos, movement.velocity);
 
-      performance.mark('start-pgrav');
-      movement.velocity = addVec2d(movement.velocity, movement.accelaration);
-      const gravityForce = gravity.gravityConstant;
-      movement.velocity = addVec2d(
-        [0, gravityForce * deltaTime],
-        movement.velocity
+      const gravityForce = this.constants.gravity;
+      movement.velocity[1] += gravityForce * deltaTime;
+
+      movement.velocity = scaleVec2d(
+        movement.velocity,
+        physicConstants.friction
       );
-      performance.mark('end-pgrav');
-      performance.measure('pgrav', 'start-pgrav', 'end-pgrav');
-      movement.velocity = scaleVec2d(movement.velocity, friction);
     }
-    const pgrav = performance
+    /*     const pgrav = performance
       .getEntriesByName('pgrav')
       .reduce((prev, cur) => prev + cur.duration, 0);
     const pspring = performance
       .getEntriesByName('pspring')
-      .reduce((prev, cur) => prev + cur.duration, 0);
+      .reduce((prev, cur) => prev + cur.duration, 0); */
   }
 }
 
 export class Springs implements Beaviour2<MovementComponent, SpringComponent> {
   gpu: GPU.GPU;
-  constructor() {
+  constants: PhysicConstants;
+  constructor(constants: PhysicConstants) {
     this.gpu = new GPU.GPU();
+    this.constants = constants;
   }
   process(
     cmps: [MovementComponent, SpringComponent][],
@@ -232,35 +236,38 @@ export class Springs implements Beaviour2<MovementComponent, SpringComponent> {
         let force = subVec2d(spring.springAnchor.pos, pos);
         let { magnitude: extensionLength, result: extensionDirection } =
           normalizeVec2d(force);
-
+        if (extensionLength <= spring.restLength) continue;
         // Calculate the extension amount (distance from rest length)
-        let x =
-          spring.restLength < extensionLength
-            ? extensionLength - spring.restLength
-            : 0;
-
+        let x = extensionLength - spring.restLength;
         // Calculate the spring force based on Hooke's Law: F = -k * x
         const springForce = scaleVec2d(
           extensionDirection,
-          -1 * spring.springConstant * x * deltaTime
+          -1 * this.constants.springElasticity * x * deltaTime
         );
 
         spring.extensions[index] = extensionLength;
         totalSpringForce.push(springForce);
       }
-      let appliedForce: Vec2d = [0, 0];
+      //TODO: optimizes this
       for (const F of totalSpringForce) {
-        appliedForce = addVec2d(appliedForce, F);
+        movement.velocity = addVec2d(F, movement.velocity);
+        //  appliedForce = addVec2d(appliedForce, F);
       }
-      movement.velocity = addVec2d(appliedForce, movement.velocity);
-      movement.velocity = scaleVec2d(movement.velocity, friction - 0.1);
+      movement.velocity = scaleVec2d(
+        movement.velocity,
+        physicConstants.friction
+      );
     }
   }
 }
 
-export function generateRandomPosition(): PositionComponent {
+export function generateRandomPosition(
+  x: number,
+  y: number,
+  variance = 1
+): PositionComponent {
   return {
-    name: 'position',
-    pos: [Math.random() * 50, Math.random() * 30],
+    name: "position",
+    pos: [Math.random() * variance * x, Math.random() * variance * y],
   };
 }
