@@ -2,7 +2,7 @@ import p5 from "p5";
 import sketch from "./sketch.ts";
 import { pageState } from "./shared.ts";
 
-const canvas = document.getElementById("sketch") as HTMLCanvasElement;
+const canvas = document.getElementById("sketch") as HTMLDivElement;
 const btn = document.getElementById("pause");
 const startBtn = document.getElementById("start");
 const playback = document.getElementById("playback") as HTMLVideoElement;

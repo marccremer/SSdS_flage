@@ -9,10 +9,11 @@ import {
   SpringComponent,
   Springs,
   Vec2d,
+  Wind,
 } from "./physics";
-import { pageState, physicConstants } from "./shared";
-const width = window.innerWidth;
-const height = window.innerHeight;
+import { generateWind, pageState, physicConstants } from "./shared";
+const width = window.innerWidth - 20;
+const height = window.innerHeight - 20;
 
 const particles: Particle[] = [];
 
@@ -20,11 +21,18 @@ const N = 300;
 const SHIRT_WIDTH = 20;
 const SHIRT_HEIGHT = Math.ceil(N / SHIRT_WIDTH);
 const springConstant = physicConstants.springElasticity;
-physicConstants.springElasticity = 0.99;
-physicConstants.gravity = 0.98;
+let maxMagnitude = 100;
+physicConstants.springElasticity = 11.2;
+physicConstants.gravity = 10;
 physicConstants.friction = 0.9;
+let tempWind: Vec2d = [0, 0];
+
+physicConstants.currentWindForce = () => tempWind;
 const spacing = 50;
-const defaultSpringLength = 20;
+let accumulator = 0;
+const FIXED_DELTA_TIME = 0.086; // Higher physics frequency, effectively doubling update speed
+
+const defaultSpringLength = 5;
 const anchorIndex = [0, SHIRT_WIDTH - 1, Math.ceil(SHIRT_WIDTH / 2)];
 for (let row = 0; row < SHIRT_HEIGHT; row++) {
   for (let col = 0; col < SHIRT_WIDTH; col++) {
@@ -37,7 +45,7 @@ for (let row = 0; row < SHIRT_HEIGHT; row++) {
     if (row == 0 && anchorIndex.includes(col)) {
       springPartners.push({
         name: "position",
-        pos: [-300 + spacing * col - 200, -100],
+        pos: [-700, -300 + spacing * col - 200],
       });
     }
     if (row > 0) {
@@ -71,6 +79,7 @@ for (let row = 0; row < SHIRT_HEIGHT; row++) {
 let dragging = false;
 let currentlyDragging: Particle;
 const physics = new Physics(physicConstants);
+const wind = new Wind(physicConstants);
 const springs = new Springs(physicConstants);
 const sketch = (p: p5) => {
   const b = p.color(255, 255, 255);
@@ -127,11 +136,12 @@ const sketch = (p: p5) => {
           p.fill(c2);
         }
         p.line(x, y, x2, y2);
-        const text = springCmp.extensions[index];
-        // p.text('extension ' + Math.ceil(text), x, y);
+        /*         const text = springCmp.extensions[index];
+        p.fill(0);
+        p.text("extension " + Math.ceil(text), x, y); */
       }
     }
-    const components = particles.map((e) => e.components);
+    /*     const components = particles.map((e) => e.components);
     const pyhsComponents = components.map((comps) => {
       return comps.filter((el) => el.name !== "spring") as [
         PositionComponent,
@@ -143,12 +153,25 @@ const sketch = (p: p5) => {
       const sComps = comps.find((el) => el.name === "spring")!;
       const mComps = comps.find((el) => el.name === "movement")!;
       return [mComps, sComps] as [MovementComponent, SpringComponent];
-    });
-    const pdelta = p.deltaTime / 100;
-    if (p.deltaTime > 5) {
-      physics.process(pyhsComponents, pdelta);
-      springs.process(springcomponents, pdelta);
+    }); */
+    console.log("deltaTime", p.deltaTime);
+    accumulator += p.deltaTime;
+    tempWind = generateWind(FIXED_DELTA_TIME, 100);
+    if (accumulator >= FIXED_DELTA_TIME) {
+      for (const particle of particles) {
+        const [position, movement, gravity, spring] = particle.components;
+        springs.process([movement, spring], FIXED_DELTA_TIME);
+        physics.process([position, movement, gravity], FIXED_DELTA_TIME);
+        wind.process([position, movement, gravity], FIXED_DELTA_TIME);
+        accumulator -= FIXED_DELTA_TIME;
+      }
     }
+    let fps = p.frameRate();
+
+    // Set the text properties
+    p.fill(0); // Set text color to black
+    p.textSize(16); // Set text size
+    p.text("FPS: " + fps.toFixed(2), 10, 20); // Show FPS with 2 decimal places
   };
 };
 

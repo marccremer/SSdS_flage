@@ -76,23 +76,20 @@ export class Particle {
 }
 
 interface Beaviour<ComponentA extends Component<any>> {
-  process(cmps: [ComponentA][], deltaTime: number): void;
+  process(cmps: [ComponentA], deltaTime: number): void;
 }
 interface Beaviour2<
   ComponentA extends Component<any>,
   ComponentB extends Component<any>
 > {
-  process(cmps: [ComponentA, ComponentB][], deltaTime: number): void;
+  process(cmps: [ComponentA, ComponentB], deltaTime: number): void;
 }
 interface Beaviour3<
   ComponentA extends Component<any>,
   ComponentB extends Component<any>,
   ComponentC extends Component<any>
 > {
-  process(
-    cmps: [ComponentA, ComponentB, ComponentC][],
-    deltaTime: number
-  ): void;
+  process(cmps: [ComponentA, ComponentB, ComponentC], deltaTime: number): void;
 }
 interface Beaviour4<
   ComponentA extends Component<any>,
@@ -101,7 +98,7 @@ interface Beaviour4<
   ComponentD extends Component<any>
 > {
   process(
-    cmps: [ComponentA, ComponentB, ComponentC, ComponentD][],
+    cmps: [ComponentA, ComponentB, ComponentC, ComponentD],
     deltaTime: number
   ): void;
 }
@@ -113,7 +110,7 @@ interface Beaviour5<
   ComponentE extends Component<any>
 > {
   process(
-    cmps: [ComponentA, ComponentB, ComponentC, ComponentD, ComponentE][],
+    cmps: [ComponentA, ComponentB, ComponentC, ComponentD, ComponentE],
     deltaTime: number
   ): void;
 }
@@ -187,31 +184,23 @@ export class Physics
     this.constants = constants;
   }
   process(
-    cmps: [PositionComponent, MovementComponent, GravityComponent][],
+    cmps: [PositionComponent, MovementComponent, GravityComponent],
     deltaTime: number
   ): void {
-    for (const entity of cmps) {
-      const [position, movement] = entity;
-      console.assert(
-        !isNaN(movement.velocity[0]),
-        "velocity should not be NaN" + JSON.stringify(movement)
-      );
-      position.pos = addVec2d(position.pos, movement.velocity);
+    const [position, movement] = cmps;
+    console.assert(
+      !isNaN(movement.velocity[0]),
+      "velocity should not be NaN" + JSON.stringify(movement)
+    );
+    position.pos = addVec2d(
+      position.pos,
+      scaleVec2d(movement.velocity, deltaTime)
+    );
 
-      const gravityForce = this.constants.gravity;
-      movement.velocity[1] += gravityForce * deltaTime;
+    const gravityForce = this.constants.gravity;
+    movement.velocity[1] += gravityForce * deltaTime;
 
-      movement.velocity = scaleVec2d(
-        movement.velocity,
-        physicConstants.friction
-      );
-    }
-    /*     const pgrav = performance
-      .getEntriesByName('pgrav')
-      .reduce((prev, cur) => prev + cur.duration, 0);
-    const pspring = performance
-      .getEntriesByName('pspring')
-      .reduce((prev, cur) => prev + cur.duration, 0); */
+    movement.velocity = scaleVec2d(movement.velocity, physicConstants.friction);
   }
 }
 
@@ -222,42 +211,60 @@ export class Springs implements Beaviour2<MovementComponent, SpringComponent> {
     this.gpu = new GPU.GPU();
     this.constants = constants;
   }
+  process(cmps: [MovementComponent, SpringComponent], deltaTime: number): void {
+    const [movement, spring] = cmps;
+    const springPartners = spring.springPartner;
+    let totalSpringForce: Vec2d = [0, 0];
+    for (let index = 0; index < springPartners.length; index++) {
+      const { pos } = springPartners[index];
+
+      let force = subVec2d(spring.springAnchor.pos, pos);
+      let { magnitude: extensionLength, result: extensionDirection } =
+        normalizeVec2d(force);
+      if (extensionLength <= spring.restLength) continue;
+      // Calculate the extension amount (distance from rest length)
+      let x = extensionLength - spring.restLength;
+      // Calculate the spring force based on Hooke's Law: F = -k * x
+      const springForce = scaleVec2d(
+        extensionDirection,
+        -1 * Math.min(this.constants.springElasticity * x * deltaTime, 1_000)
+      );
+
+      spring.extensions[index] = extensionLength;
+      totalSpringForce = addVec2d(totalSpringForce, springForce);
+    }
+
+    movement.velocity = addVec2d(totalSpringForce, movement.velocity);
+    movement.velocity = scaleVec2d(movement.velocity, physicConstants.friction);
+  }
+}
+export class Wind
+  implements Beaviour3<PositionComponent, MovementComponent, GravityComponent>
+{
+  gpu: GPU.GPU;
+  constants: { currentWindForce: (delta: number) => Vec2d };
+  constructor(constants: PhysicConstants) {
+    this.gpu = new GPU.GPU();
+    this.constants = constants;
+  }
   process(
-    cmps: [MovementComponent, SpringComponent][],
+    cmps: [PositionComponent, MovementComponent, GravityComponent],
     deltaTime: number
   ): void {
-    for (const entity of cmps) {
-      const [movement, spring] = entity;
-      const partners = spring.springPartner;
-      const totalSpringForce: Vec2d[] = [];
-      for (let index = 0; index < partners.length; index++) {
-        const { pos } = partners[index];
+    const [position, movement] = cmps;
+    console.assert(
+      !isNaN(movement.velocity[1]),
+      "velocity should not be NaN" + JSON.stringify(movement)
+    );
+    position.pos = addVec2d(
+      position.pos,
+      scaleVec2d(movement.velocity, deltaTime)
+    );
 
-        let force = subVec2d(spring.springAnchor.pos, pos);
-        let { magnitude: extensionLength, result: extensionDirection } =
-          normalizeVec2d(force);
-        if (extensionLength <= spring.restLength) continue;
-        // Calculate the extension amount (distance from rest length)
-        let x = extensionLength - spring.restLength;
-        // Calculate the spring force based on Hooke's Law: F = -k * x
-        const springForce = scaleVec2d(
-          extensionDirection,
-          -1 * this.constants.springElasticity * x * deltaTime
-        );
+    const windForce = this.constants.currentWindForce(deltaTime);
+    movement.velocity = addVec2d(movement.velocity, windForce);
 
-        spring.extensions[index] = extensionLength;
-        totalSpringForce.push(springForce);
-      }
-      //TODO: optimizes this
-      for (const F of totalSpringForce) {
-        movement.velocity = addVec2d(F, movement.velocity);
-        //  appliedForce = addVec2d(appliedForce, F);
-      }
-      movement.velocity = scaleVec2d(
-        movement.velocity,
-        physicConstants.friction
-      );
-    }
+    movement.velocity = scaleVec2d(movement.velocity, physicConstants.friction);
   }
 }
 
