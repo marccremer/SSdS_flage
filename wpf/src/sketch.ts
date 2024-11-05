@@ -83,8 +83,9 @@ const wind = new Wind(physicConstants);
 const springs = new Springs(physicConstants);
 const sketch = (p: p5) => {
   const b = p.color(255, 255, 255);
+  const img = p.loadImage("flag.png");
   p.setup = () => {
-    p.createCanvas(width, height);
+    p.createCanvas(width, height, p.WEBGL);
     p.background(b);
   };
   p.mousePressed = () => {
@@ -110,7 +111,7 @@ const sketch = (p: p5) => {
   p.draw = () => {
     if (pageState.paused) return;
     p.background(b);
-    p.translate(width / 2, height / 2);
+    // p.translate(width / 2, height / 2);
     let c = p.color(240, 204, 0);
     let c2 = p.color(200, 200, 0);
     const mouse: Vec2d = [p.mouseX - p.width / 2, p.mouseY - p.height / 2]; // Adjust mouse position for translation
@@ -122,7 +123,7 @@ const sketch = (p: p5) => {
     p.circle(mouse[0], mouse[1], 20);
     for (const particle of particles) {
       const [x, y] = particle.components[0].pos;
-      p.circle(x, y, 20);
+      //p.circle(x, y, 20);
       const springCmp = particle.components[3];
       const partners = springCmp.springPartner;
 
@@ -157,6 +158,7 @@ const sketch = (p: p5) => {
     console.log("deltaTime", p.deltaTime);
     accumulator += p.deltaTime;
     tempWind = generateWind(FIXED_DELTA_TIME, 100);
+    const points = [];
     if (accumulator >= FIXED_DELTA_TIME) {
       for (const particle of particles) {
         const [position, movement, gravity, spring] = particle.components;
@@ -164,15 +166,53 @@ const sketch = (p: p5) => {
         physics.process([position, movement, gravity], FIXED_DELTA_TIME);
         wind.process([position, movement, gravity], FIXED_DELTA_TIME);
         accumulator -= FIXED_DELTA_TIME;
+        points.push(position.pos);
       }
     }
+
     let fps = p.frameRate();
 
     // Set the text properties
     p.fill(0); // Set text color to black
     p.textSize(16); // Set text size
-    p.text("FPS: " + fps.toFixed(2), 10, 20); // Show FPS with 2 decimal places
+    p.text("FPS: " + fps.toFixed(2), mouse[0], mouse[1]); // Show FPS with 2 decimal places
+    applyImageTextureToShape(p, img, points, SHIRT_HEIGHT, SHIRT_WIDTH);
   };
 };
 
+function applyImageTextureToShape(
+  instance: p5,
+  img: p5.Image,
+  points: Vec2d[],
+  gridHeight: number,
+  gridWidth: number
+) {
+  if (!img || points.length < 3) return; // Ensure we have enough points
+
+  // Loop through each cell in the grid
+  for (let row = 0; row < gridHeight - 1; row++) {
+    for (let col = 0; col < gridWidth - 1; col++) {
+      // Get the four corners of each cell
+      let topLeft = points[row * gridWidth + col];
+      let topRight = points[row * gridWidth + col + 1];
+      let bottomLeft = points[(row + 1) * gridWidth + col];
+      let bottomRight = points[(row + 1) * gridWidth + col + 1];
+
+      // Map texture coordinates (u, v) to grid coordinates
+      let u1 = (col / gridWidth) * img.width;
+      let v1 = (row / gridHeight) * img.height;
+      let u2 = ((col + 1) / gridWidth) * img.width;
+      let v2 = ((row + 1) / gridHeight) * img.height;
+
+      // Draw the cell as a textured quadrilateral
+      instance.beginShape();
+      instance.texture(img);
+      instance.vertex(topLeft[0], topLeft[1], u1, v1);
+      instance.vertex(topRight[0], topRight[1], u2, v1);
+      instance.vertex(bottomRight[0], bottomRight[1], u2, v2);
+      instance.vertex(bottomLeft[0], bottomLeft[1], u1, v2);
+      instance.endShape(instance.CLOSE);
+    }
+  }
+}
 export default sketch;
