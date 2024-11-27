@@ -1,4 +1,4 @@
-import { generateRandomPosition, Vec2d } from "./physics";
+import { generateRandomPosition, Vec2d } from './physics';
 
 export const pageState = {
   paused: false,
@@ -14,5 +14,5 @@ export function generateWind(deltaTime: number, maxMagnitude: number): Vec2d {
   const {
     pos: [x, y],
   } = generateRandomPosition(1, -1, 3);
-  return [x * 1.1, y];
+  return [x, y * 0.9];
 }

@@ -1,23 +1,23 @@
-import p5 from "p5";
-import { PhysicConstants, physicConstants } from "./shared";
+import p5 from 'p5';
+import { PhysicConstants, physicConstants } from './shared';
 
 interface Component<N extends string> {
   name: N;
 }
 
-export interface PositionComponent extends Component<"position"> {
+export interface PositionComponent extends Component<'position'> {
   pos: Vec2d;
 }
-export interface MovementComponent extends Component<"movement"> {
+export interface MovementComponent extends Component<'movement'> {
   velocity: Vec2d;
   accelaration: Vec2d;
 }
-export interface GravityComponent extends Component<"gravity"> {
+export interface GravityComponent extends Component<'gravity'> {
   mass: number;
 }
 
 // Hooks law Fspring = -K * extensions
-export interface SpringComponent extends Component<"spring"> {
+export interface SpringComponent extends Component<'spring'> {
   springPartner: PositionComponent[];
   extensions: number[];
   springAnchor: PositionComponent;
@@ -32,7 +32,7 @@ type ParticleComponents = [
 ];
 type ParticleComponent = ParticleComponents[number];
 
-type ParticleComponentsNames = ParticleComponent["name"];
+type ParticleComponentsNames = ParticleComponent['name'];
 
 export class Particle {
   components: ParticleComponents;
@@ -43,31 +43,31 @@ export class Particle {
   ) {
     this.components = [
       position,
-      { name: "movement", accelaration: [0, 0], velocity: [0, 0] },
-      { mass, name: "gravity" },
+      { name: 'movement', accelaration: [0, 0], velocity: [0, 0] },
+      { mass, name: 'gravity' },
       Spring,
     ];
   }
   getComponent<N extends ParticleComponentsNames>(
     name: N
-  ): N extends "position"
+  ): N extends 'position'
     ? PositionComponent
-    : N extends "movement"
+    : N extends 'movement'
     ? MovementComponent
-    : N extends "gravity"
+    : N extends 'gravity'
     ? GravityComponent
-    : N extends "spring"
+    : N extends 'spring'
     ? SpringComponent
     : never {
     switch (name) {
-      case "position":
+      case 'position':
         // Hack to get return type working
         return this.components[0] as any;
-      case "movement":
+      case 'movement':
         return this.components[1] as any;
-      case "gravity":
+      case 'gravity':
         return this.components[2] as any;
-      case "spring":
+      case 'spring':
         return this.components[3] as any;
       default:
         throw new Error(`Invalid name ${name}`);
@@ -190,7 +190,7 @@ export class Physics
     const [position, movement] = cmps;
     console.assert(
       !isNaN(movement.velocity[0]),
-      "velocity should not be NaN" + JSON.stringify(movement)
+      'velocity should not be NaN' + JSON.stringify(movement)
     );
     position.pos = addVec2d(
       position.pos,
@@ -218,9 +218,9 @@ export class Springs implements Beaviour2<MovementComponent, SpringComponent> {
     for (let index = 0; index < springPartners.length; index++) {
       const { pos } = springPartners[index];
 
-      let force = subVec2d(spring.springAnchor.pos, pos);
+      let partnerDistance = subVec2d(spring.springAnchor.pos, pos);
       let { magnitude: extensionLength, result: extensionDirection } =
-        normalizeVec2d(force);
+        normalizeVec2d(partnerDistance);
       if (extensionLength <= spring.restLength) continue;
       // Calculate the extension amount (distance from rest length)
       let x = extensionLength - spring.restLength;
@@ -254,7 +254,7 @@ export class Wind
     const [position, movement] = cmps;
     console.assert(
       !isNaN(movement.velocity[1]),
-      "velocity should not be NaN" + JSON.stringify(movement)
+      'velocity should not be NaN' + JSON.stringify(movement)
     );
     position.pos = addVec2d(
       position.pos,
@@ -274,7 +274,7 @@ export function generateRandomPosition(
   variance = 1
 ): PositionComponent {
   return {
-    name: "position",
+    name: 'position',
     pos: [Math.random() * variance * x, Math.random() * variance * y],
   };
 }
