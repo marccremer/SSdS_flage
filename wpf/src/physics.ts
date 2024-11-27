@@ -6,11 +6,11 @@ interface Component<N extends string> {
 }
 
 export interface PositionComponent extends Component<'position'> {
-  pos: Vec2d;
+  pos: Vec3d;
 }
 export interface MovementComponent extends Component<'movement'> {
-  velocity: Vec2d;
-  accelaration: Vec2d;
+  velocity: Vec3d;
+  accelaration: Vec3d;
 }
 export interface GravityComponent extends Component<'gravity'> {
   mass: number;
@@ -43,7 +43,7 @@ export class Particle {
   ) {
     this.components = [
       position,
-      { name: 'movement', accelaration: [0, 0], velocity: [0, 0] },
+      { name: 'movement', accelaration: [0, 0, 0], velocity: [0, 0, 0] },
       { mass, name: 'gravity' },
       Spring,
     ];
@@ -116,27 +116,28 @@ interface Beaviour5<
 }
 
 export type Vec2d = [x: number, y: number];
+export type Vec3d = [x: number, y: number, z: number];
 
 interface PhysicsObject {
-  position: Vec2d;
+  position: Vec3d;
 }
 const gpu = new GPU.GPU();
 
-export function addVec2d(a: Vec2d, b: Vec2d): Vec2d {
-  return [a[0] + b[0], a[1] + b[1]];
+export function addVec3d(a: Vec3d, b: Vec3d): Vec3d {
+  return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 }
-export function subVec2d(a: Vec2d, b: Vec2d): Vec2d {
-  return [a[0] - b[0], a[1] - b[1]];
-}
-
-export function scaleVec2d(vec: Vec2d, scale: number): Vec2d {
-  return [vec[0] * scale, vec[1] * scale];
+export function subVec3d(a: Vec3d, b: Vec3d): Vec3d {
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 }
 
-/* export function normalizeVec2d(vec: Vec2d) {
-  const normalizeKernel = gpu.createKernelMap<[Vec2d], { magnitude: number }>(
+export function scaleVec3d(vec: Vec3d, scale: number): Vec3d {
+  return [vec[0] * scale, vec[1] * scale, vec[2] * scale];
+}
+
+/* export function normalizeVec2d(vec: Vec3d) {
+  const normalizeKernel = gpu.createKernelMap<[Vec3d], { magnitude: number }>(
     {
-      magnitude: function (v: Vec2d) {
+      magnitude: function (v: Vec3d) {
         return Math.sqrt(v[0] * v[0] + v[1] * v[1]);
       },
     },
@@ -151,7 +152,7 @@ export function scaleVec2d(vec: Vec2d, scale: number): Vec2d {
 
   // Run the kernel to compute both magnitude and normalized vector
   const { result, magnitude } = normalizeKernel(vec) as {
-    result: Vec2d;
+    result: Vec3d;
     magnitude: number;
   };
 
@@ -161,16 +162,16 @@ export function scaleVec2d(vec: Vec2d, scale: number): Vec2d {
   };
 } */
 
-function normalizeVec2d(vec: Vec2d): { magnitude: number; result: Vec2d } {
-  const [x, y] = vec;
-  const magnitude = Math.sqrt(x * x + y * y);
+function normalizeVec3d(vec: Vec3d): { magnitude: number; result: Vec3d } {
+  const [x, y, z] = vec;
+  const magnitude = Math.sqrt(x * x + y * y + z * z);
 
   // Check to avoid division by zero
   if (magnitude === 0) {
-    return { magnitude: 0, result: [0, 0] };
+    return { magnitude: 0, result: [0, 0, 0] };
   }
 
-  const result: Vec2d = [x / magnitude, y / magnitude];
+  const result: Vec3d = [x / magnitude, y / magnitude, z / magnitude];
   return { magnitude, result };
 }
 
@@ -192,15 +193,15 @@ export class Physics
       !isNaN(movement.velocity[0]),
       'velocity should not be NaN' + JSON.stringify(movement)
     );
-    position.pos = addVec2d(
+    position.pos = addVec3d(
       position.pos,
-      scaleVec2d(movement.velocity, deltaTime)
+      scaleVec3d(movement.velocity, deltaTime)
     );
 
     const gravityForce = this.constants.gravity;
     movement.velocity[1] += gravityForce * deltaTime;
 
-    movement.velocity = scaleVec2d(movement.velocity, physicConstants.friction);
+    movement.velocity = scaleVec3d(movement.velocity, physicConstants.friction);
   }
 }
 
@@ -214,35 +215,36 @@ export class Springs implements Beaviour2<MovementComponent, SpringComponent> {
   process(cmps: [MovementComponent, SpringComponent], deltaTime: number): void {
     const [movement, spring] = cmps;
     const springPartners = spring.springPartner;
-    let totalSpringForce: Vec2d = [0, 0];
+    let totalSpringForce: Vec3d = [0, 0, 0];
     for (let index = 0; index < springPartners.length; index++) {
       const { pos } = springPartners[index];
 
-      let partnerDistance = subVec2d(spring.springAnchor.pos, pos);
+      let partnerDistance = subVec3d(spring.springAnchor.pos, pos);
       let { magnitude: extensionLength, result: extensionDirection } =
-        normalizeVec2d(partnerDistance);
-      if (extensionLength <= spring.restLength) continue;
+        normalizeVec3d(partnerDistance);
+      //if (extensionLength <= spring.restLength) continue;
       // Calculate the extension amount (distance from rest length)
       let x = extensionLength - spring.restLength;
+      //if (x < 0) x = 0;
       // Calculate the spring force based on Hooke's Law: F = -k * x
-      const springForce = scaleVec2d(
+      const springForce = scaleVec3d(
         extensionDirection,
-        -1 * Math.min(this.constants.springElasticity * x * deltaTime, 1_000)
+        -1 * this.constants.springElasticity * x * deltaTime
       );
 
       spring.extensions[index] = extensionLength;
-      totalSpringForce = addVec2d(totalSpringForce, springForce);
+      totalSpringForce = addVec3d(totalSpringForce, springForce);
     }
 
-    movement.velocity = addVec2d(totalSpringForce, movement.velocity);
-    movement.velocity = scaleVec2d(movement.velocity, physicConstants.friction);
+    movement.velocity = addVec3d(totalSpringForce, movement.velocity);
+    movement.velocity = scaleVec3d(movement.velocity, physicConstants.friction);
   }
 }
 export class Wind
   implements Beaviour3<PositionComponent, MovementComponent, GravityComponent>
 {
   gpu: GPU.GPU;
-  constants: { currentWindForce: (delta: number) => Vec2d };
+  constants: { currentWindForce: (delta: number) => Vec3d };
   constructor(constants: PhysicConstants) {
     this.gpu = new GPU.GPU();
     this.constants = constants;
@@ -256,25 +258,33 @@ export class Wind
       !isNaN(movement.velocity[1]),
       'velocity should not be NaN' + JSON.stringify(movement)
     );
-    position.pos = addVec2d(
+    position.pos = addVec3d(
       position.pos,
-      scaleVec2d(movement.velocity, deltaTime)
+      scaleVec3d(movement.velocity, deltaTime)
     );
 
     const windForce = this.constants.currentWindForce(deltaTime);
-    movement.velocity = addVec2d(movement.velocity, windForce);
+    movement.velocity = addVec3d(movement.velocity, windForce);
 
-    movement.velocity = scaleVec2d(movement.velocity, physicConstants.friction);
+    movement.velocity = scaleVec3d(
+      movement.velocity,
+      physicConstants.friction * 0.99
+    );
   }
 }
 
 export function generateRandomPosition(
   x: number,
   y: number,
+  z: number,
   variance = 1
 ): PositionComponent {
   return {
     name: 'position',
-    pos: [Math.random() * variance * x, Math.random() * variance * y],
+    pos: [
+      Math.random() * variance * x,
+      Math.random() * variance * y,
+      Math.random() * variance * z,
+    ],
   };
 }

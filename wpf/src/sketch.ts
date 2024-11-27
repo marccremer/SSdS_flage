@@ -9,6 +9,7 @@ import {
   SpringComponent,
   Springs,
   Vec2d,
+  Vec3d,
   Wind,
 } from './physics';
 import { generateWind, pageState, physicConstants } from './shared';
@@ -17,28 +18,28 @@ const height = window.innerHeight - 20;
 
 const particles: Particle[] = [];
 
-const N_PARTICLES = 300;
+const N_PARTICLES = 200;
 const SHIRT_WIDTH = 20;
 const SHIRT_HEIGHT = Math.ceil(N_PARTICLES / SHIRT_WIDTH);
 const springConstant = physicConstants.springElasticity;
-let maxMagnitude = 100;
 
-physicConstants.springElasticity = 11.2;
-physicConstants.gravity = 19;
+physicConstants.springElasticity = 40.2;
+physicConstants.gravity = 0.9;
 physicConstants.friction = 0.9;
 
-let tempWind: Vec2d = [0, 0];
+let tempWind: Vec3d = [0, -0.9, 50];
 
 physicConstants.currentWindForce = () => tempWind;
 const spacing = 10;
 let accumulator = 0;
-const FIXED_DELTA_TIME = 0.096; // Higher physics frequency, effectively doubling update speed
+const FIXED_DELTA_TIME = 0.016; // Higher physics frequency, effectively doubling update speed
 
 const defaultSpringLength = 20;
 const anchorIndex = [0, SHIRT_WIDTH - 1, Math.ceil(SHIRT_WIDTH / 2)];
 for (let row = 0; row < SHIRT_HEIGHT; row++) {
   for (let col = 0; col < SHIRT_WIDTH; col++) {
     const particlePositionCmp: PositionComponent = generateRandomPosition(
+      10,
       10,
       10
     );
@@ -47,7 +48,7 @@ for (let row = 0; row < SHIRT_HEIGHT; row++) {
     if (row == 0 && anchorIndex.includes(col)) {
       springPartners.push({
         name: 'position',
-        pos: [10, 10 + spacing * col - 10],
+        pos: [10, 10 + spacing * col - 10, 0],
       });
     }
     if (row > 0) {
@@ -120,7 +121,7 @@ const sketch = (p: p5) => {
   p.draw = () => {
     if (pageState.paused) return;
     p.background(b);
-    p.translate(width / 100500500500500, height / 100500500500500);
+    // p.translate(width / 100500500500500, height / 100500500500500);
     // p.camera(p.mouseX, p.pmouseY, 0, 0, 0, 0, 0, 1, 0);
     p.circle(-200, 0, 0);
     p.stroke(red);
@@ -133,7 +134,7 @@ const sketch = (p: p5) => {
     let c = p.color(240, 204, 0);
     let c2 = p.color(200, 200, 0);
     let odd = true;
-    const mouse: Vec2d = [p.mouseX - p.width / 2, p.mouseY - p.height / 2];
+    const mouse: Vec3d = [p.mouseX - p.width / 2, p.mouseY - p.height / 2, 0];
     p.circle(mouse[0], mouse[1], 20);
     p.fill(c);
     if (dragging && currentlyDragging) {
@@ -175,7 +176,7 @@ const sketch = (p: p5) => {
     }); */
     accumulator += p.deltaTime;
     const points = [];
-    tempWind = generateWind(FIXED_DELTA_TIME, 10);
+    tempWind = generateWind(FIXED_DELTA_TIME, 20);
     if (accumulator >= FIXED_DELTA_TIME) {
       physicConstants.gravity = 1;
       for (const particle of particles) {
