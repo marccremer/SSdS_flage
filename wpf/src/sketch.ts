@@ -1,10 +1,16 @@
 import p5 from 'p5';
+import { Point } from './Point';
+import { Edge } from './Edge';
 const width = window.innerWidth;
 const height = window.innerHeight;
-let rotate = 1;
-const rotationRate = 0.01;
+
+declare function generateGrid(): { points: Point[]; edges: Edge[] };
+declare function applySpringForce(a: Point, b: Point): void;
+const gravity = new p5.Vector(0, 1, 0);
+const wind = new p5.Vector(0, 1, 0);
 const sketch = (p: p5) => {
   const b = p.color(255, 255, 255);
+  let { edges, points } = generateGrid();
   p.setup = () => {
     p.createCanvas(width, height);
     p.background(b);
@@ -13,20 +19,19 @@ const sketch = (p: p5) => {
   p.draw = () => {
     p.background(b);
     p.translate(width / 2, height / 2);
-    let size = 600;
-    const n = 24;
-    const step = size / n;
-    p.rotate(p.QUARTER_PI * rotate);
-    const move = -(size / 2);
-
-    for (let i = 0; i <= n; i++) {
-      let c = p.color(240, 204, 0);
-      p.fill(c);
-      p.square(move, move, size, 0, 0, 0, 0);
-      p.rotate(p.QUARTER_PI * rotate);
-      size -= step;
+    for (const edge of edges) {
+      edge.update(applySpringForce, (point) => {
+        point.applyForce(gravity);
+        point.applyForce(wind);
+      });
     }
-    rotate += rotationRate * 0.2;
+
+    for (const point of points) {
+      point.draw(p);
+    }
+    for (const edge of edges) {
+      edge.draw(p);
+    }
   };
 };
 
