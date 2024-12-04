@@ -1,7 +1,7 @@
-import { Point } from './Point';
-import p5 from 'p5';
+import { Point } from "./Point";
+import p5 from "p5";
 export class Edge {
-  constructor(private a: Point, private b: Point) {}
+  constructor(private a: Point, private b: Point, public restLength = 10) {}
 
   update(
     edgeUpdateFn: (a: Point, b: Point) => void,
