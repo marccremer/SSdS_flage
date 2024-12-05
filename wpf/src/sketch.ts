@@ -2,6 +2,7 @@ import p5 from "p5";
 import { Point } from "./Point";
 import { Edge } from "./Edge";
 import { assertNotNull, createStyledButton } from "./utils";
+import { applySpringForce } from "./spring";
 const width = window.innerWidth;
 const height = window.innerHeight;
 
@@ -38,22 +39,7 @@ const generateGrid = (): { points: Point[]; edges: Edge[] } => {
   return { points, edges };
 };
 
-const applySpringForce = (a: Point, b: Point): void => {
-  const springConstant = 0.5;
-  const restLength = 20; //Hab ich jetzt mal so lang wie das Spacing gemacht
-
-  const force = p5.Vector.sub(b.pos, a.pos);
-  const stretch = force.mag() - restLength;
-
-  //Hooks Gesetz: F = -k * stretch
-  force.normalize();
-  force.mult(springConstant * stretch);
-
-  a.applyForce(force);
-  force.mult(-1);
-  b.applyForce(force);
-};
-
+const springConstant = 0.5;
 const gravity = new p5.Vector(0, 0.1, 0);
 const wind = new p5.Vector(0.1, 0, 0);
 
