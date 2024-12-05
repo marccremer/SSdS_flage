@@ -20,7 +20,7 @@ const generateGrid = (): { points: Point[]; edges: Edge[] } => {
 
       if (x === 0) {
         point.velocity = new p5.Vector(0, 0);
-        point.applyForce = () => {};
+        point.locked = true;
       }
 
       points.push(point);

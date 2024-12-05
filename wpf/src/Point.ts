@@ -1,7 +1,8 @@
-import p5 from 'p5';
+import p5 from "p5";
 export class Point {
   pos: p5.Vector;
   updated = false;
+  locked = false;
   velocity: p5.Vector = new p5.Vector(0, 0, 0);
   acceleration: p5.Vector = new p5.Vector(0, 0, 0);
   constructor(pos: p5.Vector) {
@@ -14,6 +15,7 @@ export class Point {
   }
 
   applyForce(force: p5.Vector) {
+    if (this.locked) return;
     this.acceleration.add(force);
   }
 
