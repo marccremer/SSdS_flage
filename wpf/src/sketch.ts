@@ -3,6 +3,7 @@ import { Point } from "./Point";
 import { Edge } from "./Edge";
 import { assertNotNull, createStyledButton } from "./utils";
 import { applySpringForce } from "./spring";
+import { exportVideo, initializeRecorder } from "./recording";
 const width = window.innerWidth;
 const height = window.innerHeight;
 
@@ -43,67 +44,6 @@ const springConstant = 0.5;
 const gravity = new p5.Vector(0, 0.1, 0);
 const wind = new p5.Vector(0.1, 0, 0);
 
-type RecorderSetup = {
-  recorder: MediaRecorder;
-  chunks: Blob[];
-};
-
-/**
- * Initializes the media recorder for a canvas element.
- * @param canvas The canvas element to capture.
- * @param frameRate The desired frame rate for the recording.
- * @param onStop Callback function to handle the recorded video.
- * @returns A setup object containing the recorder and an array for data chunks.
- */
-function initializeRecorder(
-  canvas: HTMLCanvasElement,
-  frameRate: number,
-  onStop: (chunks: Blob[]) => void
-): RecorderSetup {
-  const chunks: Blob[] = [];
-  const stream = canvas.captureStream(frameRate);
-  const recorder = new MediaRecorder(stream);
-
-  recorder.ondataavailable = (event) => {
-    if (event.data.size && event.data.size > 0) {
-      chunks.push(event.data);
-    }
-  };
-
-  recorder.onstop = () => {
-    console.log("stopped");
-
-    return onStop(chunks);
-  };
-
-  return { recorder, chunks };
-}
-
-/**
- * Exports the recorded video and handles display and download.
- * @param chunks Array of video data chunks.
- */
-function exportVideo(chunks: Blob[]): void {
-  const blob = new Blob(chunks, { type: "video/webm" });
-
-  // Create a video element to play the recorded video
-  const videoElement = document.createElement("video");
-  videoElement.id = `video-${Date.now()}`;
-  videoElement.controls = true;
-  document.body.appendChild(videoElement);
-  videoElement.src = window.URL.createObjectURL(blob);
-
-  // Create a link to download the video
-  const url = window.URL.createObjectURL(blob);
-  const downloadLink = document.createElement("a");
-  document.body.appendChild(downloadLink);
-  downloadLink.style.display = "none";
-  downloadLink.href = url;
-  downloadLink.download = "newVid.webm";
-  downloadLink.click();
-  window.URL.revokeObjectURL(url);
-}
-
 const sketch = (p: p5) => {
   const b = p.color(255, 255, 255);
   let { edges, points } = generateGrid();
@@ -117,11 +57,11 @@ const sketch = (p: p5) => {
     const { recorder } = initializeRecorder(canvas, 30, exportVideo);
     points = grid.points;
     edges = grid.edges;
-    const startRecordingBtn = createStyledButton(p, "START", [200, 10], () => {
+    createStyledButton(p, "START", [200, 10], () => {
       assertNotNull(recorder, "recorder");
       recorder.start();
     });
-    const stopRecordingBtn = createStyledButton(p, "STOP", [10, 10], () => {
+    createStyledButton(p, "STOP", [10, 10], () => {
       assertNotNull(recorder, "recorder");
       recorder.stop();
     });
