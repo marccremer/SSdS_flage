@@ -1,25 +1,36 @@
 import { Point } from './Point';
 import p5 from 'p5';
+
 export class Edge {
-  constructor(private a: Point, private b: Point) {}
+
+  restLength = 20;
+
+  constructor(private PointA: Point, private PointB: Point) {}
 
   update(
     edgeUpdateFn: (a: Point, b: Point) => void,
     pointUpdateFn: (c: Point) => void
   ) {
-    edgeUpdateFn(this.a, this.b);
-    if (!this.a.updated) {
-      pointUpdateFn(this.a);
-      this.a.updated = true;
+    edgeUpdateFn(this.PointA, this.PointB);
+
+    if (!this.PointA.updated) {
+      pointUpdateFn(this.PointA);
+      this.PointA.update();
+      this.PointA.updated = true;
     }
-    if (!this.b.updated) {
-      pointUpdateFn(this.b);
-      this.b.updated = true;
+
+    if (!this.PointB.updated) {
+      pointUpdateFn(this.PointB);
+      this.PointB.update();
+      this.PointB.updated = true;
     }
   }
   draw(p: p5) {
-    const { x: x1, y: y1 } = this.a.pos;
-    const { x: x2, y: y2 } = this.b.pos;
-    p.line(x1, y1, x2, y2);
+    p.line(
+        this.PointA.pos.x,
+        this.PointA.pos.y,
+        this.PointB.pos.x,
+        this.PointB.pos.y
+    )
   }
 }
