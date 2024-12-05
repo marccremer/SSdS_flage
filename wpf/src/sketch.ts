@@ -4,41 +4,12 @@ import { Edge } from "./Edge";
 import { assertNotNull, createStyledButton } from "./utils";
 import { applySpringForce } from "./spring";
 import { exportVideo, initializeRecorder } from "./recording";
+import { generateGrid } from "./setup";
 const width = window.innerWidth;
 const height = window.innerHeight;
 
-const generateGrid = (): { points: Point[]; edges: Edge[] } => {
-  const points: Point[] = [];
-  const edges: Edge[] = [];
-  const cols = 20;
-  const rows = 10;
-  const spacing = 20;
-
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < cols; x++) {
-      const point = new Point(new p5.Vector(x * spacing, y * spacing));
-
-      if (x === 0) {
-        point.velocity = new p5.Vector(0, 0);
-        point.locked = true;
-      }
-
-      points.push(point);
-
-      if (x > 0) {
-        const leftPoint = points[points.length - 2];
-        edges.push(new Edge(point, leftPoint));
-      }
-
-      if (y > 0) {
-        const abovePoint = points[(y - 1) * cols + x];
-        edges.push(new Edge(point, abovePoint));
-      }
-    }
-  }
-
-  return { points, edges };
-};
+const GRID_ROWS = 10;
+const GRID_COLS = 20;
 
 const springConstant = 0.5;
 const gravity = new p5.Vector(0, 0.1, 0);
@@ -46,17 +17,16 @@ const wind = new p5.Vector(0.1, 0, 0);
 
 const sketch = (p: p5) => {
   const b = p.color(255, 255, 255);
-  let { edges, points } = generateGrid();
+  let { edges, points } = generateGrid(GRID_COLS, GRID_ROWS);
   let canvas: HTMLCanvasElement;
+  //const img = p.loadImage("flag.png");
 
   p.setup = () => {
     p.createCanvas(width, height);
     p.background(b);
     canvas = document.getElementById("defaultCanvas0") as HTMLCanvasElement;
-    const grid = generateGrid();
     const { recorder } = initializeRecorder(canvas, 30, exportVideo);
-    points = grid.points;
-    edges = grid.edges;
+
     createStyledButton(p, "START", [200, 10], () => {
       assertNotNull(recorder, "recorder");
       recorder.start();
