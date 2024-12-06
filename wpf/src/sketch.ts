@@ -3,6 +3,7 @@ import { Point } from './Point';
 import { Edge } from './Edge';
 const width = window.innerWidth;
 const height = window.innerHeight;
+let time = 0
 
 const generateGrid = (): { points: Point[]; edges: Edge[] }  => {
 
@@ -55,8 +56,7 @@ const applySpringForce = (a: Point, b: Point): void => {
   b.applyForce(force);
 };
 
-const gravity = new p5.Vector(0, 0.1, 0);
-const wind = new p5.Vector(0.1, 0, 0);
+const gravity = new p5.Vector(0.05, 0, 0);
 
 const sketch = (p: p5) => {
   const b = p.color(255, 255, 255);
@@ -72,6 +72,8 @@ const sketch = (p: p5) => {
   };
 
   p.draw = () => {
+    let wind = new p5.Vector(0, 0.02 * p.noise(time) - 0.01, 0);
+    console.log(wind)
     p.background(b);
     p.translate(width / 2, height / 2);
 
@@ -81,14 +83,16 @@ const sketch = (p: p5) => {
         point.applyForce(wind);
       });
     }
-
+    time += 0.01;
     for (const point of points) {
-      point.draw(p);
+
       point.updated = false;
     }
     for (const edge of edges) {
       edge.draw(p);
     }
+
+
   };
 };
 
