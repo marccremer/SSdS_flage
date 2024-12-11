@@ -21,14 +21,36 @@ export const generateGrid = (
 
       points.push(point);
 
+      // Connect to the point to the left
       if (x > 0) {
         const leftPoint = points[points.length - 2];
         edges.push(new Edge(point, leftPoint));
       }
 
+      // Connect to the point above
       if (y > 0) {
         const abovePoint = points[(y - 1) * cols + x];
         edges.push(new Edge(point, abovePoint));
+
+        // Connect to the top-left diagonal point
+        if (x > 0) {
+          const topLeftPoint = points[(y - 1) * cols + (x - 1)];
+          const edge = new Edge(point, topLeftPoint);
+          edge.restLength = Math.sqrt(
+            edge.restLength ** 2 + edge.restLength ** 2
+          );
+          edges.push(edge);
+        }
+
+        // Connect to the top-right diagonal point
+        if (x < cols - 1) {
+          const topRightPoint = points[(y - 1) * cols + (x + 1)];
+          const edge = new Edge(point, topRightPoint);
+          edge.restLength = Math.sqrt(
+            edge.restLength ** 2 + edge.restLength ** 2
+          );
+          edges.push(edge);
+        }
       }
     }
   }

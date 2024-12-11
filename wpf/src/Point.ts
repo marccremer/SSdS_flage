@@ -3,6 +3,7 @@ export class Point {
   pos: p5.Vector;
   updated = false;
   locked = false;
+  damping = 0.99;
   velocity: p5.Vector = new p5.Vector(0, 0, 0);
   acceleration: p5.Vector = new p5.Vector(0, 0, 0);
   constructor(pos: p5.Vector) {
@@ -16,7 +17,7 @@ export class Point {
 
   applyForce(force: p5.Vector) {
     if (this.locked) return;
-    this.acceleration.add(force);
+    this.acceleration.add(force.mult(this.damping));
   }
 
   update() {

@@ -8,8 +8,6 @@ export function applySpringForce(
     springConstant: number;
   }
 ): void {
-  const damping = 0.99;
-
   const force = p5.Vector.sub(a.pos, b.pos);
   // Calculate the current length of the spring
 
@@ -21,7 +19,7 @@ export function applySpringForce(
   const forceMagnitude = opts.springConstant * stretch;
 
   // Scale the normalized direction vector by the force magnitude
-  const springForce = normalizedDir.mult(forceMagnitude * damping);
+  const springForce = normalizedDir.mult(forceMagnitude);
 
   // Apply the spring force to the points
   b.applyForce(springForce);

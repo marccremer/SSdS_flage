@@ -12,7 +12,7 @@ const height = window.innerHeight;
 const GRID_ROWS = 10;
 const GRID_COLS = 20;
 
-const springConstant = 0.5;
+const springConstant = 0.2;
 const gravity = new p5.Vector(0, 0.08, 0);
 const wind = new p5.Vector(0.1, 0, 0);
 
@@ -20,7 +20,7 @@ const sketch = (p: p5) => {
   const b = p.color(255, 255, 255);
   let { edges, points } = generateGrid(GRID_COLS, GRID_ROWS);
   let canvas: HTMLCanvasElement;
-  const img = p.loadImage("flag.png");
+  const img = p.loadImage("flag.jpg");
 
   let gravityLabel: p5.Element;
   let gravitySlider: p5.Element;
@@ -69,7 +69,7 @@ const sketch = (p: p5) => {
     const windValue = windSlider.value() as number;
 
     gravity.set(0, gravityValue || 0.08, 0);
-    wind.set(windValue || 0.1, 0,0);
+    wind.set(windValue || 0.1, 0, 0);
 
     for (const edge of edges) {
       edge.update(
@@ -79,18 +79,18 @@ const sketch = (p: p5) => {
             springConstant,
           }),
         (point) => {
-          point.applyForce(gravity);
-          point.applyForce(wind);
+          //  point.applyForce(gravity);
+          point.applyForce(wind.mult(1));
         }
       );
     }
 
     for (const point of points) {
-      //point.draw(p);
+      // point.draw(p);
       point.updated = false;
     }
     for (const edge of edges) {
-      edge.draw(p);
+      //edge.draw(p);
     }
     applyImageTextureToShape(edges, p, img, GRID_ROWS, GRID_COLS);
   };
