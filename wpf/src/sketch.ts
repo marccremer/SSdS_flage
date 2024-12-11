@@ -22,6 +22,11 @@ const sketch = (p: p5) => {
   let canvas: HTMLCanvasElement;
   const img = p.loadImage("flag.png");
 
+  let gravityLabel: p5.Element;
+  let gravitySlider: p5.Element;
+  let windLabel: p5.Element;
+  let windSlider: p5.Element;
+
   p.setup = () => {
     p.createCanvas(width, height, p.WEBGL);
     p.background(b);
@@ -36,11 +41,35 @@ const sketch = (p: p5) => {
       assertNotNull(recorder, "recorder");
       recorder.stop();
     });
+
+    gravityLabel = p.createDiv("Gravity:");
+    gravityLabel.position(1600, 30);
+    gravityLabel.style("font-size", "14px");
+    gravityLabel.style("color", "#000");
+
+    gravitySlider = p.createSlider(0, 0.3, gravity.y, 0.01);
+    gravitySlider.position(1600, 50);
+    gravitySlider.style("width", "200px");
+
+    windLabel = p.createDiv("Wind:");
+    windLabel.position(1600, 80);
+    windLabel.style("font-size", "14px");
+    windLabel.style("color", "#000");
+
+    windSlider = p.createSlider(0, 0.5, wind.x, 0.01);
+    windSlider.position(1600, 100);
+    windSlider.style("width", "200px");
   };
 
   p.draw = () => {
     p.background(b);
     //p.translate(width / 2, height / 2);
+
+    const gravityValue = gravitySlider.value() as number;
+    const windValue = windSlider.value() as number;
+
+    gravity.set(0, gravityValue || 0.08, 0);
+    wind.set(windValue || 0.1, 0,0);
 
     for (const edge of edges) {
       edge.update(
