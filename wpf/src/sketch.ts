@@ -69,7 +69,11 @@ const sketch = (p: p5) => {
     const windValue = windSlider.value() as number;
 
     gravity.set(0, gravityValue, 0);
-    wind.set(windValue, 0, p.random(-0.1, 0.1));
+    wind.set(
+        windValue,
+        windValue > 0 ? p.random(-0.1, 0.1) : 0,
+        windValue > 0 ? p.random(-0.5, 0.5) : 0
+    );
 
     for (const edge of edges) {
       edge.update(
@@ -90,7 +94,7 @@ const sketch = (p: p5) => {
       point.updated = false;
     }
     for (const edge of edges) {
-      edge.draw(p);
+      //edge.draw(p);
     }
     p.push();
     {

@@ -38,7 +38,7 @@ export function applyImageTextureToShape(
 
       // Draw the cell as a textured quadrilateral
       instance.beginShape(instance.QUADS);
-      instance.stroke(0);
+      instance.noStroke();
       instance.vertex(topLeft.pos.x, topLeft.pos.y, u1, v1);
       instance.vertex(topRight.pos.x, topRight.pos.y, u2, v1);
       instance.vertex(bottomRight.pos.x, bottomRight.pos.y, u2, v2);
