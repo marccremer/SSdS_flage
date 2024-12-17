@@ -16,8 +16,8 @@ export function createStyledButton(
 ): void {
   const button = p.createButton(buttonName);
   button.mouseClicked(onClick);
-  button.size(200, 100);
+  button.size(105, 61);
   button.position(position[0], position[1]);
   button.style("font-family", "Comic Sans MS");
-  button.style("font-size", "48px");
+  button.style("font-size", "24px");
 }
