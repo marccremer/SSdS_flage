@@ -17,11 +17,12 @@ export class Point {
 
   applyForce(force: p5.Vector) {
     if (this.locked) return;
-    this.acceleration.add(force.mult(this.damping));
+    this.acceleration.add(force);
   }
 
   update() {
     this.velocity.add(this.acceleration);
+    this.velocity.mult(this.damping);
     this.pos.add(this.velocity);
     this.acceleration.mult(0);
   }

@@ -14,7 +14,7 @@ export const generateGrid = (
     for (let x = 0; x < cols; x++) {
       const point = new Point(new p5.Vector(x * spacing, y * spacing));
 
-      if (x === 0) {
+      if (x === 0 && (y === 0 || y === rows - 1)){
         point.velocity = new p5.Vector(0, 0);
         point.locked = true;
       }
