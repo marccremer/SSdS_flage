@@ -43,21 +43,21 @@ const sketch = (p: p5) => {
     });
 
     gravityLabel = p.createDiv("Gravity:");
-    gravityLabel.position(1600, 30);
+    gravityLabel.position(10, 120);
     gravityLabel.style("font-size", "14px");
     gravityLabel.style("color", "#000");
 
     gravitySlider = p.createSlider(0, 0.3, gravity.y, 0.01);
-    gravitySlider.position(1600, 50);
+    gravitySlider.position(10, 140);
     gravitySlider.style("width", "200px");
 
     windLabel = p.createDiv("Wind:");
-    windLabel.position(1600, 80);
+    windLabel.position(10, 170);
     windLabel.style("font-size", "14px");
     windLabel.style("color", "#000");
 
     windSlider = p.createSlider(0, 0.5, wind.x, 0.01);
-    windSlider.position(1600, 100);
+    windSlider.position(10, 190);
     windSlider.style("width", "200px");
   };
 
