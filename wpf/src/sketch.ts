@@ -92,7 +92,7 @@ const sketch = (p: p5) => {
     for (const edge of edges) {
       //edge.draw(p);
     }
-    applyImageTextureToShape(edges, p, img, GRID_ROWS, GRID_COLS);
+    applyImageTextureToShape(points, p, img, GRID_ROWS, GRID_COLS);
   };
 };
 
