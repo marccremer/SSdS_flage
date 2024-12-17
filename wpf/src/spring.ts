@@ -8,18 +8,18 @@ export function applySpringForce(
     springConstant: number;
   }
 ): void {
-  const force = p5.Vector.sub(a.pos, b.pos);
+  const distance = p5.Vector.sub(a.pos, b.pos);
   // Calculate the current length of the spring
 
-  const stretch = force.mag() - opts.restLength;
+  const stretch = distance.mag() - opts.restLength;
   // Get the normalized direction vector
-  const normalizedDir = force.normalize();
+  const normalizedDis = distance.copy().normalize();
 
   // Calculate the magnitude of the spring force
   const forceMagnitude = opts.springConstant * stretch;
 
   // Scale the normalized direction vector by the force magnitude
-  const springForce = normalizedDir.mult(forceMagnitude);
+  const springForce = normalizedDis.copy().mult(forceMagnitude);
 
   // Apply the spring force to the points
   b.applyForce(springForce);
