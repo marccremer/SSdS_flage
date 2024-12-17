@@ -3,42 +3,22 @@ import { Point } from "./Point";
 import { Edge } from "./Edge";
 
 export function applyImageTextureToShape(
-  edges: Edge[],
+  points: Point[],
   instance: p5,
   img: p5.Image,
   gridHeight: number,
   gridWidth: number
 ) {
-  if (!img || edges.length === 0) return;
-
-  // Create a 2D array of points from edges
-  const points: Point[] = [];
-  const pointMap = new Map<string, Point>();
-
-  // Collect unique points from the edges
-  edges.forEach((edge) => {
-    const aKey = `${edge["PointA"].pos.x},${edge["PointA"].pos.y}`;
-    const bKey = `${edge["PointB"].pos.x},${edge["PointB"].pos.y}`;
-    if (!pointMap.has(aKey)) {
-      pointMap.set(aKey, edge["PointA"]);
-    }
-    if (!pointMap.has(bKey)) {
-      pointMap.set(bKey, edge["PointB"]);
-    }
-  });
-
-  points.push(...pointMap.values());
-
-  if (points.length !== gridHeight * gridWidth) {
-    console.error("Mismatch between points and grid dimensions.");
-    return;
-  }
+  if (!img || points.length === 0) return;
 
   // Sort points into a grid-like structure
-  const sortedPoints: Point[][] = [];
-  for (let row = 0; row < gridHeight; row++) {
-    sortedPoints.push(points.slice(row * gridWidth, (row + 1) * gridWidth));
-  }
+  const sortedPoints: Point[][] = to2DGrid(points, gridHeight, gridWidth);
+  const sortedPoints2 = to2DGrid(
+    points.map((p) => p.pos),
+    gridHeight,
+    gridWidth
+  );
+  console.table(sortedPoints2);
 
   // Apply texture to the grid
   instance.textureMode(instance.NORMAL);
@@ -57,7 +37,8 @@ export function applyImageTextureToShape(
       const v2 = (row + 1) / (gridHeight - 1);
 
       // Draw the cell as a textured quadrilateral
-      instance.beginShape();
+      instance.beginShape(instance.QUADS);
+      instance.stroke(0);
       instance.vertex(topLeft.pos.x, topLeft.pos.y, u1, v1);
       instance.vertex(topRight.pos.x, topRight.pos.y, u2, v1);
       instance.vertex(bottomRight.pos.x, bottomRight.pos.y, u2, v2);
@@ -65,4 +46,23 @@ export function applyImageTextureToShape(
       instance.endShape(instance.CLOSE);
     }
   }
+}
+
+function to2DGrid<T>(data: T[], columns: number, rows: number): T[][] {
+  const grid: T[][] = []; // Initialize 2D array
+
+  for (let row = 0; row < rows; row++) {
+    const start = row * columns; // Calculate the start index for this row
+    const end = start + columns; // Calculate the end index for this row
+    const rowSlice = data.slice(start, end); // Extract a portion of the input array
+
+    // Fill up the remaining slots with undefined if the slice is smaller than columns
+    while (rowSlice.length < columns) {
+      rowSlice.push(undefined);
+    }
+
+    grid.push(rowSlice); // Add the row to the grid
+  }
+
+  return grid;
 }
