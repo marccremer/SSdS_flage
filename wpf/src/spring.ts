@@ -19,7 +19,9 @@ export function applySpringForce(
   const forceMagnitude = opts.springConstant * stretch;
 
   // Scale the normalized direction vector by the force magnitude
-  const springForce = normalizedDis.copy().mult(forceMagnitude);
+  const springForce = normalizedDis
+    .copy()
+    .mult(Math.min(forceMagnitude, 10_000));
 
   // Apply the spring force to the points
   b.applyForce(springForce);

@@ -13,15 +13,10 @@ export function applyImageTextureToShape(
 
   // Sort points into a grid-like structure
   const sortedPoints: Point[][] = to2DGrid(points, gridWidth, gridHeight);
-  const sortedPoints2 = to2DGrid(
-    points.map((p) => p.pos),
-    gridHeight,
-    gridWidth
-  );
-  //console.table(sortedPoints2);
-
   // Apply texture to the grid
   instance.textureMode(instance.NORMAL);
+  //instance.specularMaterial(255, 2);
+  instance.shininess(200);
   instance.texture(img);
 
   for (let row = 0; row < gridHeight - 1; row++) {

@@ -20,59 +20,78 @@ const sketch = (p: p5) => {
   const b = p.color(255, 255, 255);
   let { edges, points } = generateGrid(GRID_COLS, GRID_ROWS);
   let canvas: HTMLCanvasElement;
-  const img = p.loadImage("flag.jpg");
-
-  let gravityLabel: p5.Element;
-  let gravitySlider: p5.Element;
-  let windLabel: p5.Element;
-  let windSlider: p5.Element;
-
+  const flags = {
+    germany: p.loadImage("germany.png"),
+    greece: p.loadImage("greece.png"),
+    morocco: p.loadImage("morocco.png"),
+  };
+  let currentFlag = flags.germany;
+  let panel;
+  let showGrid = false;
+  let shoudlGuiUpdate = 0;
+  const GUI_fps = 60;
   p.setup = () => {
     p.createCanvas(width, height, p.WEBGL);
     p.background(b);
+
     canvas = document.getElementById("defaultCanvas0") as HTMLCanvasElement;
+
+    var controller = {
+      onFlag: function (data) {
+        currentFlag = flags[data.value];
+      },
+      onWind: function (value) {
+        if (shoudlGuiUpdate < GUI_fps) return;
+        console.log("value", value);
+
+        shoudlGuiUpdate = 0;
+      },
+      onGravity: function (value) {},
+
+      onColor: function (value) {
+        document.body.style.backgroundColor = value;
+      },
+      onGrid: (value) => {
+        showGrid = !!value;
+      },
+
+      onRecordStart: function () {
+        assertNotNull(recorder, "recorder");
+        recorder.start();
+      },
+      onRecordStop: function () {
+        assertNotNull(recorder, "recorder");
+        recorder.stop();
+      },
+    };
+
+    panel = QuickSettings.create(20, 20, "test")
+      .setDraggable(true)
+      .setCollapsible(true)
+      .addDropDown("flag", Object.keys(flags), controller.onFlag)
+      .addButton("start recording", controller.onRecordStart)
+      .addButton("stop recording", controller.onRecordStop)
+      //title, min, max, value, step, callback
+      .addRange("Gravity", 0.05, 0.3, 0.05, 0.05, controller.onGravity)
+      .addRange("Wind", 0, 0.5, 0.03, 0.01, controller.onWind)
+      .addBoolean("showGrid", false, controller.onGrid);
+
     const { recorder } = initializeRecorder(canvas, 30, exportVideo);
-
-    createStyledButton(p, "START", [200, 10], () => {
-      assertNotNull(recorder, "recorder");
-      recorder.start();
-    });
-    createStyledButton(p, "STOP", [10, 10], () => {
-      assertNotNull(recorder, "recorder");
-      recorder.stop();
-    });
-
-    gravityLabel = p.createDiv("Gravity:");
-    gravityLabel.position(10, 120);
-    gravityLabel.style("font-size", "14px");
-    gravityLabel.style("color", "#000");
-
-    gravitySlider = p.createSlider(0.05, 0.3, gravity.y, 0.05);
-    gravitySlider.position(10, 140);
-    gravitySlider.style("width", "200px");
-
-    windLabel = p.createDiv("Wind:");
-    windLabel.position(10, 170);
-    windLabel.style("font-size", "14px");
-    windLabel.style("color", "#000");
-
-    windSlider = p.createSlider(0, 0.5, wind.x, 0.1);
-    windSlider.position(10, 190);
-    windSlider.style("width", "200px");
   };
-
   p.draw = () => {
     p.background(b);
-    //p.translate(width / 2, height / 2);
+    shoudlGuiUpdate += 1;
 
-    const gravityValue = gravitySlider.value() as number;
-    const windValue = windSlider.value() as number;
+    const gravityValue = panel.getValuesAsJSON()["Gravity"];
+    const windValue = panel.getValuesAsJSON()["Wind"];
+
+    // console.log("sd", panel.getValuesAsJSON(true));
 
     gravity.set(0, gravityValue, 0);
     wind.set(
-        windValue,
-        windValue > 0 ? p.random(-0.1, 0.1) : 0,
-        windValue > 0 ? p.random(-0.5, 0.5) : 0
+      windValue,
+      windValue > 0 ? p.random(-0.1, 0.1) : 0,
+      windValue > 0 ? p.random(-0.5, 0.5) : 0
     );
 
     for (const edge of edges) {
@@ -93,8 +112,13 @@ const sketch = (p: p5) => {
       // point.draw(p);
       point.updated = false;
     }
-    for (const edge of edges) {
-      //edge.draw(p);
+
+    if (!showGrid) {
+      for (const edge of edges) {
+        edge.draw(p);
+      }
+    } else {
+      applyImageTextureToShape(points, p, currentFlag, GRID_ROWS, GRID_COLS);
     }
     p.push();
     {
@@ -103,7 +127,6 @@ const sketch = (p: p5) => {
       p.rect(-10, -5, 10, 500);
     }
     p.pop();
-    applyImageTextureToShape(points, p, img, GRID_ROWS, GRID_COLS);
   };
 };
 
