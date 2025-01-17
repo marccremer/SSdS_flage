@@ -118,16 +118,14 @@ const gravity: Vector3 = Vector3.init(0, 0.05, 0);
 const wind: Vector3 = Vector3.init(0, 0.05, 0);
 const Sheet = struct {
     allocator: Allocator,
-    points: []Point,
+    points: std.ArrayList(Point),
     edges: std.ArrayList(Edge),
     pub fn init(allocator: Allocator, cols: u32, rows: u32) !Sheet {
         const spacing = 20;
-        const points = try allocator.alloc(Point, (cols * rows) + 1);
+        var points = std.ArrayList(Point).init(allocator);
         var edges = std.ArrayList(Edge).init(allocator);
         var i: u32 = 0;
         for (0..rows) |row| {
-            const len = points.len;
-            _ = len; // autofix
             for (0..cols) |col| {
                 defer {
                     i += 1;
@@ -141,11 +139,11 @@ const Sheet = struct {
                     point.locked = true;
                 }
 
-                points[i] = point;
+                try points.append(point);
 
                 // Connect to the point to the left
                 if (col > 0) {
-                    var leftPoint = points[points.len - 2];
+                    var leftPoint = points.items[points.items.len - 2];
                     const edge = Edge.init(&point, &leftPoint);
                     try edges.append(edge);
                 }
@@ -153,12 +151,12 @@ const Sheet = struct {
                 // Connect to the point above
                 if (row > 0) {
                     const localIndex = (row - 1) * cols + row;
-                    var abovePoint = points[localIndex];
+                    var abovePoint = points.items[localIndex];
                     try edges.append(Edge.init(&point, &abovePoint));
 
                     // Connect to the top-left diagonal point
                     if (col > 0) {
-                        var topLeftPoint = points[(row - 1) * cols + (col - 1)];
+                        var topLeftPoint = points.items[(row - 1) * cols + (col - 1)];
                         var edge = Edge.init(&point, &topLeftPoint);
                         edge.restLength = std.math.sqrt(edge.restLength * edge.restLength +
                             edge.restLength * edge.restLength);
@@ -167,7 +165,7 @@ const Sheet = struct {
 
                     // Connect to the top-right diagonal point
                     if (col < (cols - 1)) {
-                        var topRightPoint = points[(row - 1) * cols + (col + 1)];
+                        var topRightPoint = points.items[(row - 1) * cols + (col + 1)];
                         var edge = Edge.init(&point, &topRightPoint);
                         edge.restLength = std.math.sqrt(edge.restLength * edge.restLength +
                             edge.restLength * edge.restLength);
