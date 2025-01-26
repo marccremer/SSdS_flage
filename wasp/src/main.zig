@@ -10,12 +10,26 @@ pub fn main() !void {
     try ray_main();
     try hints();
 }
+
+pub fn assertNonNull(pointer: ?*const void, name: []const u8) void {
+    std.debug.assert(pointer != null, "{s} is null!", .{name});
+}
+
 pub fn applySpringForce(
-    a: *Point,
-    b: *Point,
+    maybe_a: ?*Point,
+    maybe_b: ?*Point,
     restLength: f32,
     springConstant: f32,
 ) void {
+    if (maybe_a == null) {
+        @panic("a is null");
+    }
+    if (maybe_b == null) {
+        @panic("b is null");
+    }
+    const a = maybe_a orelse unreachable;
+    const b = maybe_b orelse unreachable;
+
     const distance = a.pos.subtract(b.pos);
 
     // Calculate the current length of the spring
@@ -120,11 +134,12 @@ const Sheet = struct {
     allocator: Allocator,
     points: std.ArrayList(Point),
     edges: std.ArrayList(Edge),
-    pub fn init(allocator: Allocator, cols: u32, rows: u32) !Sheet {
+    pub fn init(allocator: Allocator, cols: u32, rows: u32) !*Sheet {
         const spacing = 20;
         var points = std.ArrayList(Point).init(allocator);
         var edges = std.ArrayList(Edge).init(allocator);
         var i: u32 = 0;
+        // MARK: Setup
         for (0..rows) |row| {
             for (0..cols) |col| {
                 defer {
@@ -175,23 +190,25 @@ const Sheet = struct {
             }
         }
 
-        return .{ .allocator = allocator, .points = points, .edges = edges };
+        const sheet = try allocator.create(Sheet);
+        sheet.* = .{ .allocator = allocator, .points = points, .edges = edges };
+        log("init point {} edges {}", .{ points.items.len, edges.items.len });
+        return sheet;
     }
     pub fn deint(self: *Sheet) void {
-        self.allocator.free(self.points);
+        self.points.deinit();
         self.edges.deinit();
     }
     pub fn update(self: *Sheet) !void {
         for (self.edges.items) |*edge| {
+            //log("[sheet> update] edge {any}", .{edge});
             try edge.update(Sheet.updateEdge, Sheet.updatePoint);
         }
     }
 
     pub fn draw(self: Sheet) void {
-        for (self.edges.items) |*edge| {
-            const d = edge.pointA;
-            _ = d; // autofix
-            edge.logSelf();
+        for (self.edges.items) |edge| {
+            log("[shee>draw] edge {any}", .{edge});
             const pointA = edge.pointA.pos;
             const pointB = edge.pointB.pos;
             const a: ray.Vector2 = .{ .x = pointA.x, .y = pointA.y };
@@ -224,8 +241,8 @@ const State = struct {
     rows: u32,
 
     fn init(allocator: Allocator, cols: u32, rows: u32) !State {
-        var sheet = try Sheet.init(allocator, cols, rows);
-        return .{ .allocator = allocator, .sheet = &sheet, .cols = cols, .rows = rows };
+        const sheet = try Sheet.init(allocator, cols, rows);
+        return .{ .allocator = allocator, .sheet = sheet, .cols = cols, .rows = rows };
     }
 
     pub fn deinit(self: *State) void {
@@ -252,6 +269,7 @@ fn ray_main() !void {
             else => {},
         }
     }
+    // MARK: Main
     var state: State = try State.init(allocator, 30, 20);
     defer state.deinit();
     const c = ray.Color;
