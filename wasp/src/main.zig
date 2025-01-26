@@ -35,7 +35,7 @@ pub fn applySpringForce(
     b.applyForce(springForce);
     a.applyForce(springForce.invert()); // Apply opposite force to a
 }
-
+// MARK: POINT
 const Point = struct {
     pos: Vector3,
     vel: Vector3,
@@ -43,7 +43,7 @@ const Point = struct {
     locked: bool = false,
     updated: bool = false,
     fn init(pos: Vector3) Point {
-        const vel: Vector3 = .{ .x = 0.01, .y = 0, .z = 0 };
+        const vel: Vector3 = .{ .x = 0, .y = 0, .z = 0 };
         const acc: Vector3 = .{ .x = 0, .y = 0, .z = 0 };
         return .{
             .pos = pos,
@@ -71,46 +71,30 @@ const Point = struct {
         const vel = self.vel;
         const acc = self.acc;
 
-        log("Vector3: ({}, {}, {})\n", .{ pos.x, pos.y, pos.z });
-        log("Vector3: ({}, {}, {})\n", .{ vel.x, vel.y, vel.z });
-        log("Vector3: ({}, {}, {})\n", .{ acc.x, acc.y, acc.z });
+        log("POS: ({}, {}, {})\n", .{ pos.x, pos.y, pos.z });
+        log("VEL: ({}, {}, {})\n", .{ vel.x, vel.y, vel.z });
+        log("ACC: ({}, {}, {})\n", .{ acc.x, acc.y, acc.z });
     }
 };
 const EdgeUpdateFn = *const fn (a: *Point, b: *Point) void;
 const PointUpdateFn = *const fn (c: *Point) void;
 const Edge = struct {
     restLength: u32 = 20,
-    pointA: *Point,
-    pointB: *Point,
-    fn init(pointA: *Point, pointB: *Point) Edge {
+    // index into the points array
+    pointA: usize,
+    // index into the points array
+    pointB: usize,
+
+    fn init(pointA: usize, pointB: usize) Edge {
         return .{ .pointA = pointA, .pointB = pointB };
     }
-    pub fn update(self: *Edge, edgeFN: EdgeUpdateFn, pointFn: PointUpdateFn) !void {
-        edgeFN(self.pointA, self.pointB);
-        if (!self.pointA.updated) {
-            pointFn(self.pointA);
-            self.pointA.update();
-            self.pointA.updated = true;
-        }
-        if (!self.pointB.updated) {
-            pointFn(self.pointB);
-            self.pointB.update();
-            self.pointB.updated = true;
-        }
-    }
-    pub fn draw(self: Edge) !void {
-        const a = self.pointA.pos;
-        const b = self.pointB.pos;
-        ray.drawLine(a.x, a.y, b.x, b.y, ray.Color.blue);
-    }
-    pub fn logSelf(self: *Edge) void {
-        const stdout = std.io.getStdOut().writer();
-        _ = stdout; // autofix
-        log("Edge:\n  Rest Length: {}\n", .{self.restLength});
 
-        // Log details of pointA and pointB
-        self.pointA.selfLog();
-        self.pointB.selfLog();
+    pub fn draw(self: Edge, points: std.ArrayList(Point)) !void {
+        const a_idx = self.pointA;
+        const b_idx = self.pointB;
+        const a = points.items[a_idx];
+        const b = points.items[b_idx];
+        ray.drawLine(a.x, a.y, b.x, b.y, ray.Color.blue);
     }
 };
 
@@ -120,7 +104,8 @@ const Sheet = struct {
     allocator: Allocator,
     points: std.ArrayList(Point),
     edges: std.ArrayList(Edge),
-    pub fn init(allocator: Allocator, cols: u32, rows: u32) !Sheet {
+    // MARK: SETUP
+    pub fn init(allocator: Allocator, cols: u32, rows: u32) !*Sheet {
         const spacing = 20;
         var points = std.ArrayList(Point).init(allocator);
         var edges = std.ArrayList(Edge).init(allocator);
@@ -140,45 +125,49 @@ const Sheet = struct {
                 }
 
                 try points.append(point);
-
+                const point_idx = points.items.len - 1;
                 // Connect to the point to the left
                 if (col > 0) {
-                    var leftPoint = points.items[points.items.len - 2];
-                    const edge = Edge.init(&point, &leftPoint);
+                    const leftPoint = points.items.len - 2;
+                    const edge = Edge.init(point_idx, leftPoint);
                     try edges.append(edge);
+                    log("add edge {}", .{edge});
                 }
 
                 // Connect to the point above
                 if (row > 0) {
                     const localIndex = (row - 1) * cols + row;
-                    var abovePoint = points.items[localIndex];
-                    try edges.append(Edge.init(&point, &abovePoint));
+                    try edges.append(Edge.init(point_idx, localIndex));
 
                     // Connect to the top-left diagonal point
                     if (col > 0) {
-                        var topLeftPoint = points.items[(row - 1) * cols + (col - 1)];
-                        var edge = Edge.init(&point, &topLeftPoint);
+                        const topLeftPoint: usize = (row - 1) * cols + (col - 1);
+                        var edge = Edge.init(point_idx, topLeftPoint);
                         edge.restLength = std.math.sqrt(edge.restLength * edge.restLength +
                             edge.restLength * edge.restLength);
                         try edges.append(edge);
+                        log("add edge {}", .{edge});
                     }
 
                     // Connect to the top-right diagonal point
                     if (col < (cols - 1)) {
-                        var topRightPoint = points.items[(row - 1) * cols + (col + 1)];
-                        var edge = Edge.init(&point, &topRightPoint);
+                        const topRightPoint = (row - 1) * cols + (col + 1);
+                        var edge = Edge.init(point_idx, topRightPoint);
                         edge.restLength = std.math.sqrt(edge.restLength * edge.restLength +
                             edge.restLength * edge.restLength);
                         try edges.append(edge);
+                        log("add edge {}", .{edge});
                     }
                 }
             }
         }
-
-        return .{ .allocator = allocator, .points = points, .edges = edges };
+        const sheet = try allocator.create(Sheet);
+        sheet.* = .{ .allocator = allocator, .points = points, .edges = edges };
+        log("init point {} edges {}", .{ points.items.len, edges.items.len });
+        return sheet;
     }
     pub fn deint(self: *Sheet) void {
-        self.allocator.free(self.points);
+        self.points.deinit();
         self.edges.deinit();
     }
     pub fn update(self: *Sheet) !void {
@@ -187,13 +176,10 @@ const Sheet = struct {
         }
     }
 
-    pub fn draw(self: Sheet) void {
-        for (self.edges.items) |*edge| {
-            const d = edge.pointA;
-            _ = d; // autofix
-            edge.logSelf();
-            const pointA = edge.pointA.pos;
-            const pointB = edge.pointB.pos;
+    pub fn draw(self: *Sheet) void {
+        for (self.edges.items) |edge| {
+            const pointA = self.points.items[edge.pointA].pos;
+            const pointB = self.points.items[edge.pointB].pos;
             const a: ray.Vector2 = .{ .x = pointA.x, .y = pointA.y };
             const b: ray.Vector2 = .{ .x = pointB.x, .y = pointB.y };
             ray.drawLineV(a, b, ray.Color.black);
@@ -224,15 +210,15 @@ const State = struct {
     rows: u32,
 
     fn init(allocator: Allocator, cols: u32, rows: u32) !State {
-        var sheet = try Sheet.init(allocator, cols, rows);
-        return .{ .allocator = allocator, .sheet = &sheet, .cols = cols, .rows = rows };
+        const sheet = try Sheet.init(allocator, cols, rows);
+        return .{ .allocator = allocator, .sheet = sheet, .cols = cols, .rows = rows };
     }
 
     pub fn deinit(self: *State) void {
         Sheet.deint(self.sheet);
     }
 };
-
+// MARK: MAIN
 fn ray_main() !void {
     // const monitor = ray.GetCurrentMonitor();
     // const width = ray.GetMonitorWidth(monitor);
@@ -244,7 +230,7 @@ fn ray_main() !void {
     ray.initWindow(width, height, "Flag simulator");
     defer ray.closeWindow();
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{ .stack_trace_frames = 8 }){};
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
     defer {
         switch (gpa.deinit()) {
@@ -252,13 +238,13 @@ fn ray_main() !void {
             else => {},
         }
     }
-    var state: State = try State.init(allocator, 30, 20);
+    var state = try State.init(allocator, 2, 2);
+    log("[main] {*} LEN {} {any}", .{ state.sheet.points.items, state.sheet.points.items.len, state.sheet.points.items });
     defer state.deinit();
     const c = ray.Color;
     const colors = [_]ray.Color{ c.green, c.red, c.gray, c.white, c.violet };
     const colors_len: i32 = @intCast(colors.len);
     var current_color: i32 = 2;
-
     while (!ray.windowShouldClose()) {
         // input
         var delta: i2 = 0;
@@ -278,6 +264,7 @@ fn ray_main() !void {
             defer ray.endDrawing();
 
             ray.clearBackground(colors[@intCast(current_color)]);
+            // Sheet.draw(stat.sheet)
             state.sheet.draw();
 
             // now lets use an allocator to create some dynamic text
