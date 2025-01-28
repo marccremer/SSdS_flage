@@ -94,22 +94,24 @@ const EdgeUpdateFn = *const fn (a: *Point, b: *Point) void;
 const PointUpdateFn = *const fn (c: *Point) void;
 const Edge = struct {
     restLength: u32 = 20,
-    pointA: *Point,
-    pointB: *Point,
-    fn init(pointA: *Point, pointB: *Point) Edge {
+    pointA: usize,
+    pointB: usize,
+    fn init(pointA: usize, pointB: usize) Edge {
         return .{ .pointA = pointA, .pointB = pointB };
     }
-    pub fn update(self: *Edge, edgeFN: EdgeUpdateFn, pointFn: PointUpdateFn) !void {
-        edgeFN(self.pointA, self.pointB);
-        if (!self.pointA.updated) {
-            pointFn(self.pointA);
-            self.pointA.update();
-            self.pointA.updated = true;
+    pub fn update(self: *Edge, edgeFN: EdgeUpdateFn, pointFn: PointUpdateFn, points: std.ArrayList(Point)) !void {
+        const pointA = points.items[self.pointA] orelse unreachable;
+        const pointB = points.items[self.pointB] orelse unreachable;
+        edgeFN(pointA, pointB);
+        if (!pointA.updated) {
+            pointFn(pointA);
+            pointA.update();
+            pointA.updated = true;
         }
-        if (!self.pointB.updated) {
-            pointFn(self.pointB);
-            self.pointB.update();
-            self.pointB.updated = true;
+        if (!pointB.updated) {
+            pointFn(pointB);
+            pointB.update();
+            pointB.updated = true;
         }
     }
     pub fn draw(self: Edge) !void {
@@ -145,34 +147,36 @@ const Sheet = struct {
                 defer {
                     i += 1;
                 }
-                const x: f32 = @floatFromInt(row * spacing);
+
+                const x: f32 = @floatFromInt((col + 10) * spacing);
                 const y: f32 = @floatFromInt(row * spacing);
                 var point = Point.init(.{ .x = x, .y = y, .z = 0 });
+                log("point  x {d:.2} y {d:.2}", .{ x, y });
 
-                if (row == 0 and (col == 0 or col == rows - 1)) {
+                // Lock corner points
+                if (row == 0 and (col == 0 or col == cols - 1)) {
                     point.vel = Vector3.init(0, 0, 0);
                     point.locked = true;
                 }
 
                 try points.append(point);
+                const pointIndex = points.items.len - 1;
 
                 // Connect to the point to the left
                 if (col > 0) {
-                    var leftPoint = points.items[points.items.len - 2];
-                    const edge = Edge.init(&point, &leftPoint);
-                    try edges.append(edge);
+                    const leftIndex = pointIndex - 1;
+                    try edges.append(Edge.init(leftIndex, pointIndex));
                 }
 
                 // Connect to the point above
                 if (row > 0) {
-                    const localIndex = (row - 1) * cols + row;
-                    var abovePoint = points.items[localIndex];
-                    try edges.append(Edge.init(&point, &abovePoint));
+                    const aboveIndex = (row - 1) * cols + col;
+                    try edges.append(Edge.init(aboveIndex, pointIndex));
 
                     // Connect to the top-left diagonal point
                     if (col > 0) {
-                        var topLeftPoint = points.items[(row - 1) * cols + (col - 1)];
-                        var edge = Edge.init(&point, &topLeftPoint);
+                        const topLeftIndex = (row - 1) * cols + (col - 1);
+                        var edge = Edge.init(topLeftIndex, pointIndex);
                         edge.restLength = std.math.sqrt(edge.restLength * edge.restLength +
                             edge.restLength * edge.restLength);
                         try edges.append(edge);
@@ -180,8 +184,8 @@ const Sheet = struct {
 
                     // Connect to the top-right diagonal point
                     if (col < (cols - 1)) {
-                        var topRightPoint = points.items[(row - 1) * cols + (col + 1)];
-                        var edge = Edge.init(&point, &topRightPoint);
+                        const topRightIndex = (row - 1) * cols + (col + 1);
+                        var edge = Edge.init(topRightIndex, pointIndex);
                         edge.restLength = std.math.sqrt(edge.restLength * edge.restLength +
                             edge.restLength * edge.restLength);
                         try edges.append(edge);
@@ -201,18 +205,22 @@ const Sheet = struct {
     }
     pub fn update(self: *Sheet) !void {
         for (self.edges.items) |*edge| {
-            //log("[sheet> update] edge {any}", .{edge});
             try edge.update(Sheet.updateEdge, Sheet.updatePoint);
         }
     }
+    pub fn getPoints(self: *Sheet, edge: Edge) struct { Point, Point } {
+        const aIdx = edge.pointA;
+        const bIdx = edge.pointB;
+        const a = self.points.items[aIdx];
+        const b = self.points.items[bIdx];
+        return .{ a, b };
+    }
 
-    pub fn draw(self: Sheet) void {
+    pub fn draw(self: *Sheet) void {
         for (self.edges.items) |edge| {
-            log("[shee>draw] edge {any}", .{edge});
-            const pointA = edge.pointA.pos;
-            const pointB = edge.pointB.pos;
-            const a: ray.Vector2 = .{ .x = pointA.x, .y = pointA.y };
-            const b: ray.Vector2 = .{ .x = pointB.x, .y = pointB.y };
+            const pointA, const pointB = self.getPoints(edge);
+            const a = toVector2(pointA.pos);
+            const b = toVector2(pointB.pos);
             ray.drawLineV(a, b, ray.Color.black);
         }
     }
@@ -247,6 +255,7 @@ const State = struct {
 
     pub fn deinit(self: *State) void {
         Sheet.deint(self.sheet);
+        self.allocator.destroy(self.sheet);
     }
 };
 
@@ -279,6 +288,9 @@ fn ray_main() !void {
 
     while (!ray.windowShouldClose()) {
         // input
+        if (ray.isKeyPressed(.q)) {
+            break;
+        }
         var delta: i2 = 0;
         if (ray.isKeyPressed(ray.KeyboardKey.up)) delta += 1;
         if (ray.isKeyPressed(ray.KeyboardKey.down)) delta -= 1;
@@ -287,7 +299,7 @@ fn ray_main() !void {
         }
         {
             // update
-            try state.sheet.update();
+            // try state.sheet.update();
         }
 
         // draw
@@ -309,6 +321,9 @@ fn ray_main() !void {
             ray.drawFPS(width - 100, 10);
         }
     }
+}
+fn toVector2(vec: Vector3) ray.Vector2 {
+    return .{ .x = vec.x, .y = vec.y };
 }
 
 fn hints() !void {
