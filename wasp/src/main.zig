@@ -44,7 +44,7 @@ pub fn applySpringForce(
     // Scale the normalized direction vector by the force magnitude
     const scale = if (forceMagnitude < 10_000) forceMagnitude else 10_000;
     const springForce = normalizedDis.scale(scale);
-
+    log("spring force {} mag {} distance {} A {} B {}", .{ springForce, forceMagnitude, distance, a.pos, b.pos });
     // Apply the spring force to the points
     b.applyForce(springForce);
     a.applyForce(springForce.invert()); // Apply opposite force to a
@@ -57,7 +57,7 @@ const Point = struct {
     locked: bool = false,
     updated: bool = false,
     fn init(pos: Vector3) Point {
-        const vel: Vector3 = .{ .x = 0.01, .y = 0, .z = 0 };
+        const vel: Vector3 = .{ .x = 0.00, .y = 0, .z = 0 };
         const acc: Vector3 = .{ .x = 0, .y = 0, .z = 0 };
         return .{
             .pos = pos,
@@ -66,17 +66,24 @@ const Point = struct {
         };
     }
     pub fn applyForce(self: *Point, force: Vector3) void {
-        if (!self.locked) {
+        if (self.locked) {
+            log("adding acc {} to {}", .{ self.acc, force });
             self.acc = rlm.vector3Add(self.acc, force);
         }
     }
     fn update(self: *Point) void {
-        self.acc = rlm.vector3Add(self.acc, self.vel);
+        const DRAG = 0.015;
+
+        self.vel = rlm.vector3Scale(self.vel, 1.0 - DRAG);
         self.pos = rlm.vector3Add(self.pos, self.vel);
-        self.acc = Vector3.init(0, 0, 0);
+        self.acc = rlm.vector3ClampValue(self.acc, 0, 100);
     }
     pub fn draw(self: *Point) void {
-        ray.drawCircle(self.pos.x, self.pos.y, 10, ray.Color.black);
+        const x: i32 = @intFromFloat(self.pos.x);
+        _ = x; // autofix
+        const y: i32 = @intFromFloat(self.pos.y);
+        _ = y; // autofix
+        //ray.drawCircle(x, y, 1, ray.Color.black);
         self.updated = false;
     }
 
@@ -100,19 +107,28 @@ const Edge = struct {
         return .{ .pointA = pointA, .pointB = pointB };
     }
     pub fn update(self: *Edge, edgeFN: EdgeUpdateFn, pointFn: PointUpdateFn, points: std.ArrayList(Point)) !void {
-        const pointA = points.items[self.pointA] orelse unreachable;
-        const pointB = points.items[self.pointB] orelse unreachable;
-        edgeFN(pointA, pointB);
+        _ = pointFn; // autofix
+        _ = edgeFN; // autofix
+        const pointA = &points.items[self.pointA];
+        const pointB = &points.items[self.pointB];
+        log("pointA {} pos {}", .{ pointA, pointA.pos.x });
+        log("pointB {} pos {}", .{ pointB, pointA.pos.x });
+        const edgeRestLength: f32 = 20;
+        const springConstant: f32 = 0.37;
+        applySpringForce(pointA, pointB, edgeRestLength, springConstant);
         if (!pointA.updated) {
-            pointFn(pointA);
+            pointA.applyForce(gravity);
+            pointA.applyForce(wind);
             pointA.update();
             pointA.updated = true;
         }
         if (!pointB.updated) {
-            pointFn(pointB);
+            pointB.applyForce(gravity);
+            pointB.applyForce(wind);
             pointB.update();
             pointB.updated = true;
         }
+        log("pointA {} pos {}", .{ pointA, pointA.pos.x });
     }
     pub fn draw(self: Edge) !void {
         const a = self.pointA.pos;
@@ -130,8 +146,8 @@ const Edge = struct {
     }
 };
 
-const gravity: Vector3 = Vector3.init(0, 0.05, 0);
-const wind: Vector3 = Vector3.init(0, 0.05, 0);
+const gravity: Vector3 = .{ .x = 1, .y = 0, .z = 0 };
+const wind: Vector3 = .{ .x = 0, .y = 1, .z = 0 };
 const Sheet = struct {
     allocator: Allocator,
     points: std.ArrayList(Point),
@@ -204,8 +220,28 @@ const Sheet = struct {
         self.edges.deinit();
     }
     pub fn update(self: *Sheet) !void {
+        const DRAG = 0.015;
+        _ = DRAG; // autofix
+
         for (self.edges.items) |*edge| {
-            try edge.update(Sheet.updateEdge, Sheet.updatePoint);
+            const pointA = &self.points.items[edge.pointA];
+            const pointB = &self.points.items[edge.pointB];
+            const edgeRestLength: f32 = 20;
+            const springConstant: f32 = 0.37;
+            applySpringForce(pointA, pointB, edgeRestLength, springConstant);
+            if (!pointA.updated) {
+                pointA.applyForce(gravity);
+                pointA.applyForce(wind);
+                pointA.update();
+
+                pointA.updated = true;
+            }
+            if (!pointB.updated) {
+                pointB.applyForce(gravity);
+                pointB.applyForce(wind);
+                pointB.update();
+                pointB.updated = true;
+            }
         }
     }
     pub fn getPoints(self: *Sheet, edge: Edge) struct { Point, Point } {
@@ -219,9 +255,15 @@ const Sheet = struct {
     pub fn draw(self: *Sheet) void {
         for (self.edges.items) |edge| {
             const pointA, const pointB = self.getPoints(edge);
-            const a = toVector2(pointA.pos);
-            const b = toVector2(pointB.pos);
-            ray.drawLineV(a, b, ray.Color.black);
+            const pointAx: i32 = @intFromFloat(pointA.pos.x);
+            const pointAy: i32 = @intFromFloat(pointA.pos.y);
+            const pointBx: i32 = @intFromFloat(pointB.pos.x);
+            const pointBy: i32 = @intFromFloat(pointB.pos.y);
+
+            ray.drawLine(pointAx, pointAy, pointBx, pointBy, ray.Color.black);
+        }
+        for (self.points.items) |*point| {
+            point.draw();
         }
     }
 
@@ -230,12 +272,6 @@ const Sheet = struct {
         const edgeRestLength: f32 = 20;
         const springConstant: f32 = 0.37;
         applySpringForce(a, b, edgeRestLength, springConstant);
-    }
-
-    // Named function for updating points
-    pub fn updatePoint(point: *Point) void {
-        point.applyForce(gravity);
-        point.applyForce(wind);
     }
 
     fn calculateConnections(rows: u32, cols: u32) u32 {
@@ -299,7 +335,7 @@ fn ray_main() !void {
         }
         {
             // update
-            // try state.sheet.update();
+            try state.sheet.update();
         }
 
         // draw
@@ -307,7 +343,6 @@ fn ray_main() !void {
             ray.beginDrawing();
             defer ray.endDrawing();
 
-            ray.clearBackground(colors[@intCast(current_color)]);
             state.sheet.draw();
 
             // now lets use an allocator to create some dynamic text
@@ -319,6 +354,7 @@ fn ray_main() !void {
             ray.drawText(dynamic, 300, 250, 20, ray.Color.white);
 
             ray.drawFPS(width - 100, 10);
+            ray.clearBackground(colors[@intCast(current_color)]);
         }
     }
 }
