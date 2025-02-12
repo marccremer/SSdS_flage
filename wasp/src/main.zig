@@ -31,7 +31,12 @@ pub fn applySpringForce(
     const b = maybe_b orelse unreachable;
 
     const distance = a.pos.subtract(b.pos);
-
+    if (std.math.isNan(a.pos.x)) {
+        @panic("x is Nan");
+    }
+    if (distance.length() < restLength) {
+        return;
+    }
     // Calculate the current length of the spring
     const stretch: f32 = distance.length() - restLength;
 
@@ -46,8 +51,8 @@ pub fn applySpringForce(
     const springForce = normalizedDis.scale(scale);
     log("spring force {} mag {} distance {} A {} B {}", .{ springForce, forceMagnitude, distance, a.pos, b.pos });
     // Apply the spring force to the points
-    b.applyForce(springForce);
-    a.applyForce(springForce.invert()); // Apply opposite force to a
+    b.acc = b.acc.add(springForce);
+    a.acc = a.acc.add(springForce.invert()); // Apply opposite force to a
 }
 
 const Point = struct {
@@ -66,7 +71,7 @@ const Point = struct {
         };
     }
     pub fn applyForce(self: *Point, force: Vector3) void {
-        if (self.locked) {
+        if (!self.locked) {
             log("adding acc {} to {}", .{ self.acc, force });
             self.acc = rlm.vector3Add(self.acc, force);
         }
@@ -114,20 +119,11 @@ const Edge = struct {
         log("pointA {} pos {}", .{ pointA, pointA.pos.x });
         log("pointB {} pos {}", .{ pointB, pointA.pos.x });
         const edgeRestLength: f32 = 20;
+        _ = edgeRestLength; // autofix
         const springConstant: f32 = 0.37;
-        applySpringForce(pointA, pointB, edgeRestLength, springConstant);
-        if (!pointA.updated) {
-            pointA.applyForce(gravity);
-            pointA.applyForce(wind);
-            pointA.update();
-            pointA.updated = true;
-        }
-        if (!pointB.updated) {
-            pointB.applyForce(gravity);
-            pointB.applyForce(wind);
-            pointB.update();
-            pointB.updated = true;
-        }
+        _ = springConstant; // autofix
+        pointA.pos = pointA.pos.add(.{ .x = 1, .y = 0, .z = 0 });
+
         log("pointA {} pos {}", .{ pointA, pointA.pos.x });
     }
     pub fn draw(self: Edge) !void {
@@ -146,8 +142,8 @@ const Edge = struct {
     }
 };
 
-const gravity: Vector3 = .{ .x = 1, .y = 0, .z = 0 };
-const wind: Vector3 = .{ .x = 0, .y = 1, .z = 0 };
+const gravity: Vector3 = .{ .x = 0.01, .y = 0, .z = 0 };
+const wind: Vector3 = .{ .x = 0, .y = 0.01, .z = 0 };
 const Sheet = struct {
     allocator: Allocator,
     points: std.ArrayList(Point),
@@ -230,17 +226,15 @@ const Sheet = struct {
             const springConstant: f32 = 0.37;
             applySpringForce(pointA, pointB, edgeRestLength, springConstant);
             if (!pointA.updated) {
-                pointA.applyForce(gravity);
-                pointA.applyForce(wind);
-                pointA.update();
+                if (!pointA.locked) {
+                    log("adding acc {} to {}", .{ pointA.acc, gravity });
+                    pointA.acc = pointA.acc.add(gravity);
+                    pointA.acc = pointA.acc.add(wind);
+                }
+                pointA.vel = pointA.vel.add(pointA.acc);
+                pointA.pos = pointA.pos.add(pointA.vel);
 
                 pointA.updated = true;
-            }
-            if (!pointB.updated) {
-                pointB.applyForce(gravity);
-                pointB.applyForce(wind);
-                pointB.update();
-                pointB.updated = true;
             }
         }
     }
