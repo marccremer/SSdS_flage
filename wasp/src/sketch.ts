@@ -6,6 +6,7 @@ import { applySpringForce } from "./spring";
 import { exportVideo, initializeRecorder } from "./recording";
 import { generateGrid } from "./setup";
 import { applyImageTextureToShape } from "./proto";
+import {handleSphereCollision} from "./collision.ts";
 const width = window.innerWidth;
 const height = window.innerHeight;
 
@@ -108,8 +109,13 @@ const sketch = (p: p5) => {
       );
     }
 
+    const sphereCenter = p.createVector(500, 100,0);
+    const sphereRadius = 100;
+
     for (const point of points) {
-      // point.draw(p);
+
+      handleSphereCollision(point, sphereCenter, sphereRadius, p);
+      //point.draw(p);
       point.updated = false;
     }
 
@@ -121,11 +127,10 @@ const sketch = (p: p5) => {
       applyImageTextureToShape(points, p, currentFlag, GRID_ROWS, GRID_COLS);
     }
     p.push();
-    {
-      p.fill(150);
-      p.noStroke();
-      p.rect(-10, -5, 10, 500);
-    }
+    p.noFill();
+    p.stroke(255, 0,0);
+    p.translate(sphereCenter.x, sphereCenter.y, sphereCenter.z);
+    p.sphere(sphereRadius);
     p.pop();
   };
 };
