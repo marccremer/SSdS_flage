@@ -31,5 +31,9 @@ export class Edge {
       this.PointB.pos.x,
       this.PointB.pos.y
     );
+    p.fill("red");
+    if (this.PointA.inside) p.circle(this.PointA.pos.x, this.PointA.pos.y, 5);
+    if (this.PointB.inside) p.circle(this.PointB.pos.x, this.PointB.pos.y, 5);
+    p.noFill();
   }
 }

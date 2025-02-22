@@ -6,7 +6,7 @@ import { applySpringForce } from "./spring";
 import { exportVideo, initializeRecorder } from "./recording";
 import { generateGrid } from "./setup";
 import { applyImageTextureToShape } from "./proto";
-import {handleSphereCollision} from "./collision.ts";
+import { handleSphereCollision } from "./collision.ts";
 const width = window.innerWidth;
 const height = window.innerHeight;
 
@@ -29,6 +29,7 @@ const sketch = (p: p5) => {
   let currentFlag = flags.germany;
   let panel;
   let showGrid = false;
+  let paused = false;
   let shoudlGuiUpdate = 0;
   const GUI_fps = 60;
   p.setup = () => {
@@ -64,6 +65,9 @@ const sketch = (p: p5) => {
         assertNotNull(recorder, "recorder");
         recorder.stop();
       },
+      onPause: (value) => {
+        paused = !!value;
+      },
     };
 
     panel = QuickSettings.create(20, 20, "test")
@@ -71,6 +75,7 @@ const sketch = (p: p5) => {
       .setCollapsible(true)
       .addDropDown("flag", Object.keys(flags), controller.onFlag)
       .addButton("start recording", controller.onRecordStart)
+      .addBoolean("Paused", false, controller.onPause)
       .addButton("stop recording", controller.onRecordStop)
       //title, min, max, value, step, callback
       .addRange("Gravity", 0.05, 0.3, 0.05, 0.05, controller.onGravity)
@@ -85,8 +90,8 @@ const sketch = (p: p5) => {
 
     const gravityValue = panel.getValuesAsJSON()["Gravity"];
     const windValue = panel.getValuesAsJSON()["Wind"];
-
-    // console.log("sd", panel.getValuesAsJSON(true));
+    const sphereCenter = p.createVector(400, 250, 0);
+    const sphereRadius = 100;
 
     gravity.set(0, gravityValue, 0);
     wind.set(
@@ -95,28 +100,27 @@ const sketch = (p: p5) => {
       windValue > 0 ? p.random(-0.5, 0.5) : 0
     );
 
-    for (const edge of edges) {
-      edge.update(
-        (a, b) =>
-          applySpringForce(a, b, {
-            restLength: edge.restLength,
-            springConstant,
-          }),
-        (point) => {
-          point.applyForce(gravity);
-          point.applyForce(wind.mult(1));
-        }
-      );
-    }
+    if (!paused) {
+      for (const edge of edges) {
+        edge.update(
+          (a, b) =>
+            applySpringForce(a, b, {
+              restLength: edge.restLength,
+              springConstant,
+            }),
+          (point) => {
+            point.applyForce(gravity);
+            point.applyForce(wind.mult(1));
+            handleSphereCollision(point, sphereCenter, sphereRadius, p);
+          }
+        );
+      }
 
-    const sphereCenter = p.createVector(500, 100,0);
-    const sphereRadius = 100;
-
-    for (const point of points) {
-
-      handleSphereCollision(point, sphereCenter, sphereRadius, p);
-      //point.draw(p);
-      point.updated = false;
+      for (const point of points) {
+        handleSphereCollision(point, sphereCenter, sphereRadius, p);
+        //point.draw(p);
+        point.updated = false;
+      }
     }
 
     if (!showGrid) {
@@ -127,8 +131,7 @@ const sketch = (p: p5) => {
       applyImageTextureToShape(points, p, currentFlag, GRID_ROWS, GRID_COLS);
     }
     p.push();
-    p.noFill();
-    p.stroke(255, 0,0);
+    p.stroke(0, 200, 0);
     p.translate(sphereCenter.x, sphereCenter.y, sphereCenter.z);
     p.sphere(sphereRadius);
     p.pop();
