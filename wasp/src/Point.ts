@@ -75,57 +75,86 @@ export class Point {
       this.applyForce(escapeForce);
     }
   }
+
   collideWithBox(box: Box) {
-    const boxMin = p5.Vector.sub(
-      box.center,
-      new p5.Vector(box.width / 2, box.height / 2, box.depth / 2)
-    );
-    const boxMax = p5.Vector.add(
-      box.center,
-      new p5.Vector(box.width / 2, box.height / 2, box.depth / 2)
-    );
-
-    const nextPos = this.nextPoint();
-    let collided = false;
-
-    // Check X boundaries
-    if (nextPos.x < boxMin.x) {
-      this.velocity.x = 0;
-      collided = true;
-    } else if (nextPos.x > boxMax.x) {
-      this.pos.x = boxMax.x;
-      this.velocity.x = 0;
-      collided = true;
-    }
-
-    // Check Y boundaries
-    if (nextPos.y < boxMin.y) {
-      this.velocity.y = 0;
-      collided = true;
-    } else if (nextPos.y > boxMax.y) {
-      this.pos.y = boxMax.y;
-      this.velocity.y = 0;
-      collided = true;
-    }
-
-    // Check Z boundaries
-    if (nextPos.z < boxMin.z) {
-      this.velocity.z = 0;
-      collided = true;
-    } else if (nextPos.z > boxMax.z) {
-      this.velocity.z = 0;
-      collided = true;
-    }
-
-    if (collided) {
+    const { center, depth, height, width } = box;
+    const face = closestFaceNormal(center, width, height, depth, this.pos);
+    if (face) {
       this.inside = true;
-      /*       // Reset velocity in the direction towards the center of the box
-      const directionToCenter = p5.Vector.sub(box.center, this.pos).normalize();
-      this.velocity.set(
-        directionToCenter.x === 0 ? this.velocity.x : 0,
-        directionToCenter.y === 0 ? this.velocity.y : 0,
-        directionToCenter.z === 0 ? this.velocity.z : 0
-      ); */
+      this.velocity.set(0, 0, 0);
     }
   }
+}
+function closestFaceNormal(
+  boxCenter: p5.Vector,
+  width: number,
+  height: number,
+  depth: number,
+  point: p5.Vector
+): p5.Vector | null {
+  const halfW = width / 2;
+  const halfH = height / 2;
+  const halfD = depth / 2;
+
+  // Compute box min and max bounds
+  const minX = boxCenter.x - halfW,
+    maxX = boxCenter.x + halfW;
+  const minY = boxCenter.y - halfH,
+    maxY = boxCenter.y + halfH;
+  const minZ = boxCenter.z - halfD,
+    maxZ = boxCenter.z + halfD;
+
+  // Check if the point is inside the box
+  if (
+    point.x < minX ||
+    point.x > maxX ||
+    point.y < minY ||
+    point.y > maxY ||
+    point.z < minZ ||
+    point.z > maxZ
+  ) {
+    return null; // Point is outside the box
+  }
+
+  // Compute distances to each face
+  const distances = {
+    left: point.x - minX, // -X face
+    right: maxX - point.x, // +X face
+    bottom: point.y - minY, // -Y face
+    top: maxY - point.y, // +Y face
+    back: point.z - minZ, // -Z face
+    front: maxZ - point.z, // +Z face
+  };
+
+  // Find the closest face
+  let minDist = Infinity;
+  let closestNormal = new p5.Vector(0, 0, 0);
+
+  for (const [face, dist] of Object.entries(distances)) {
+    if (dist < minDist) {
+      minDist = dist;
+      switch (face) {
+        case "left":
+          closestNormal = new p5.Vector(-1, 0, 0);
+          break;
+        case "right":
+          closestNormal = new p5.Vector(1, 0, 0);
+          break;
+        case "bottom":
+          closestNormal = new p5.Vector(0, -1, 0);
+          break;
+        case "top":
+          closestNormal = new p5.Vector(0, 1, 0);
+          break;
+        case "back":
+          closestNormal = new p5.Vector(0, 0, -1);
+          break;
+        case "front":
+          closestNormal = new p5.Vector(0, 0, 1);
+          break;
+      }
+    }
+  }
+
+  return closestNormal;
 }

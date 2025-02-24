@@ -32,7 +32,7 @@ const sketch = (p: p5) => {
   let panel: QuickSettings;
   let showGrid = false;
   let paused = false;
-  const floor = new Box(new p5.Vector(0, 600, 0), 200, 100, 20);
+  const floor = new Box(new p5.Vector(0, 600, 0), 3000, 10, 5000);
   const sphereCenter = p.createVector(300, 350, -100);
   const sphereRadius = 200;
   let shoudlGuiUpdate = 0;
@@ -40,7 +40,7 @@ const sketch = (p: p5) => {
   p.setup = () => {
     p.createCanvas(width, height, p.WEBGL);
     p.background(b);
-    p.debugMode();
+    //  p.debugMode();
 
     canvas = document.getElementById("defaultCanvas0") as HTMLCanvasElement;
 
@@ -76,16 +76,18 @@ const sketch = (p: p5) => {
       },
     };
 
-    panel = QuickSettings.create(20, 20, "test")
-      .setDraggable(true)
-      .addDropDown("flag", Object.keys(flags), controller.onFlag)
-      .addButton("start recording", controller.onRecordStart)
-      .addBoolean("Paused", false, controller.onPause)
-      .addButton("stop recording", controller.onRecordStop)
-      //title, min, max, value, step, callback
-      .addRange("Gravity", 0.05, 0.3, 0.05, 0.05, controller.onGravity)
-      .addRange("Wind", 0, 0.5, 0.03, 0.01, controller.onWind)
-      .addBoolean("showGrid", false, controller.onGrid);
+    {
+      panel = QuickSettings.create(20, 20, "test")
+        .setDraggable(true)
+        .addDropDown("flag", Object.keys(flags), controller.onFlag)
+        .addButton("start recording", controller.onRecordStart)
+        .addBoolean("Paused", false, controller.onPause)
+        .addButton("stop recording", controller.onRecordStop)
+        //title, min, max, value, step, callback
+        .addRange("Gravity", 0.05, 0.3, 0.05, 0.05, controller.onGravity)
+        .addRange("Wind", 0, 0.5, 0.03, 0.01, controller.onWind)
+        .addBoolean("showGrid", false, controller.onGrid);
+    }
 
     const { recorder } = initializeRecorder(canvas, 30, exportVideo);
   };
@@ -121,14 +123,12 @@ const sketch = (p: p5) => {
               point.applyForce(gravity);
               point.applyForce(wind.mult(1));
               handleSphereCollision(point, sphereCenter, sphereRadius, p);
-              // point.collideWithBox(floor);
+              point.collideWithBox(floor);
             }
           );
         }
 
         for (const point of points) {
-          handleSphereCollision(point, sphereCenter, sphereRadius, p);
-          //point.draw(p);
           point.updated = false;
         }
       }
