@@ -17,8 +17,6 @@ export function handleSphereCollision(
   if (pointSphereCollision(nextPoint, sphere)) {
     point.inside = true;
     point.collideWithSphere(sphere.center, sphere.radius);
-  } else {
-    point.inside = false;
   }
 
   // resolvePointSphereCollision(point, sphere);
