@@ -13,8 +13,10 @@ export class Point {
   }
 
   draw(p: p5) {
-    p.circle(this.pos.x, this.pos.y, 10);
-    this.updated = false;
+    p.push();
+    p.translate(this.pos.x, this.pos.y, this.pos.z);
+    p.sphere(5);
+    p.pop();
   }
 
   applyForce(force: p5.Vector) {

@@ -4,9 +4,14 @@ import { Edge } from "./Edge";
 import { assertNotNull, createStyledButton } from "./utils";
 import { applySpringForce } from "./spring";
 import { exportVideo, initializeRecorder } from "./recording";
-import { generateGrid } from "./setup";
-import { applyImageTextureToShape } from "./proto";
-import { handleSphereCollision } from "./collision.ts";
+import {generateGrid, generateGridXZ} from "./setup";
+import {applyImageTextureToShape, drawClothIn3D} from "./proto";
+import {
+  handleSphereCollision,
+  handleSphereCollisionCCD,
+  handleSphereCollisionSebi,
+  updatePointWithSubSteps
+} from "./collision.ts";
 import { Box } from "./Box.ts";
 const width = window.innerWidth;
 const height = window.innerHeight;
@@ -21,7 +26,7 @@ var easycam;
 
 const sketch = (p: p5) => {
   const b = p.color(255, 255, 255);
-  let { edges, points } = generateGrid(GRID_COLS, GRID_ROWS);
+  let { edges, points } = generateGridXZ(GRID_COLS, GRID_ROWS);
   let canvas: HTMLCanvasElement;
   const flags = {
     germany: p.loadImage("germany.png"),
@@ -33,7 +38,7 @@ const sketch = (p: p5) => {
   let showGrid = false;
   let paused = false;
   const floor = new Box(new p5.Vector(0, 600, 0), 3000, 10, 5000);
-  const sphereCenter = p.createVector(300, 350, -100);
+  const sphereCenter = p.createVector(300, 350, 100);
   const sphereRadius = 200;
   let shoudlGuiUpdate = 0;
   const GUI_fps = 60;
@@ -103,34 +108,41 @@ const sketch = (p: p5) => {
 
     gravity.set(0, gravityValue, 0);
     wind.set(
-      windValue,
-      windValue > 0 ? p.random(-0.1, 0.1) : 0,
-      windValue > 0 ? p.random(-0.5, 0.5) : 0
+      0,
+      0 > 0 ? p.random(-0.1, 0.1) : 0,
+      0 > 0 ? p.random(-0.5, 0.5) : 0
     );
 
     {
       // UPDATE
       if (!paused) {
-        for (const edge of edges) {
-          edge.update(
-            (a, b) =>
-              applySpringForce(a, b, {
-                restLength: edge.restLength,
-                springConstant,
-              }),
-            (point) => {
-              point.inside = false;
-              point.applyForce(gravity);
-              point.applyForce(wind.mult(1));
-              handleSphereCollision(point, sphereCenter, sphereRadius, p);
-              point.collideWithBox(floor);
+        const subSteps = 5;
+        for (let step = 0; step < subSteps; step++) {
+
+          for (const edge of edges){
+
+            applySpringForce(edge.PointA, edge.PointB, {
+              restLength: edge.restLength,
+              springConstant: springConstant / subSteps,
+            });
+          }
+
+          for (const point of points){
+
+            point.inside = false;
+
+            if(!point.locked){
+
+              point.applyForce(gravity.copy().div(subSteps));
+              point.applyForce(wind.copy().div(subSteps));
+
+              point.update();
+
+              handleSphereCollisionSebi(point, sphereCenter, sphereRadius);
             }
-          );
+          }
         }
 
-        for (const point of points) {
-          point.updated = false;
-        }
       }
     }
 
@@ -139,7 +151,7 @@ const sketch = (p: p5) => {
         edge.draw(p);
       }
     } else {
-      applyImageTextureToShape(points, p, currentFlag, GRID_ROWS, GRID_COLS);
+      drawClothIn3D(p, points, GRID_COLS, GRID_ROWS);
     }
     p.push();
     p.stroke(0, 200, 0);

@@ -12,7 +12,9 @@ export const generateGrid = (
 
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
-      const point = new Point(new p5.Vector(col * spacing, row * spacing));
+
+      const zOffset = 10 * Math.sin((col / (cols - 1)) * Math.PI);
+      const point = new Point(new p5.Vector(col * spacing, row * spacing, zOffset));
 
       if (col === 0 && (row === 0 || row === rows - 1)) {
         point.velocity = new p5.Vector(0, 0);

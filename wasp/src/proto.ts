@@ -61,3 +61,56 @@ function to2DGrid<T>(data: T[], columns: number, rows: number): T[][] {
 
   return grid;
 }
+
+export function drawClothIn3D(
+    p: p5,
+    points: Point[],
+    gridCols: number,
+    gridRows: number
+) {
+  // Wir gehen davon aus, dass:
+  // - points.length = gridCols * gridRows
+  // - points[row * gridCols + col] liefert den jeweiligen Punkt
+  // - Jeder Point hat pos = p5.Vector(x, y, z)
+
+  p.push();
+  p.noStroke();
+  p.fill(200); // beliebige Farbe oder Material
+
+  p.beginShape(p.TRIANGLES);
+
+  // Wir durchlaufen jede "Zelle" im Gitter (row, col)
+  // und erstellen 2 Dreiecke:
+  //   (topLeft,  bottomLeft, topRight)
+  //   (topRight, bottomLeft, bottomRight)
+
+  for (let row = 0; row < gridRows - 1; row++) {
+    for (let col = 0; col < gridCols - 1; col++) {
+      // Indexberechnung der 4 Eckpunkte
+      const topLeftIndex = row * gridCols + col;
+      const topRightIndex = row * gridCols + (col + 1);
+      const bottomLeftIndex = (row + 1) * gridCols + col;
+      const bottomRightIndex = (row + 1) * gridCols + (col + 1);
+
+      // Hole die 4 Punkte
+      const topLeft = points[topLeftIndex].pos;
+      const topRight = points[topRightIndex].pos;
+      const bottomLeft = points[bottomLeftIndex].pos;
+      const bottomRight = points[bottomRightIndex].pos;
+
+      // 1. Dreieck (topLeft, bottomLeft, topRight)
+      p.vertex(topLeft.x, topLeft.y, topLeft.z);
+      p.vertex(bottomLeft.x, bottomLeft.y, bottomLeft.z);
+      p.vertex(topRight.x, topRight.y, topRight.z);
+
+      // 2. Dreieck (topRight, bottomLeft, bottomRight)
+      p.vertex(topRight.x, topRight.y, topRight.z);
+      p.vertex(bottomLeft.x, bottomLeft.y, bottomLeft.z);
+      p.vertex(bottomRight.x, bottomRight.y, bottomRight.z);
+    }
+  }
+
+  p.endShape();
+
+  p.pop();
+}

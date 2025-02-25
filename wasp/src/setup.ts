@@ -57,3 +57,48 @@ export const generateGrid = (
 
   return { points, edges };
 };
+
+export const generateGridXZ = (
+    cols: number,
+    rows: number
+): {points: Point[]; edges: Edge[]} => {
+
+  const points: Point[] = [];
+  const edges: Edge[] = [];
+  const spacing = 20;
+
+  for(let row = 0; row < rows; row++){
+    for(let col = 0; col < cols ; col++){
+
+      const xPos = col * spacing;
+      const zPos = row * spacing;
+      const yPos = 0;
+
+      const point = new Point(new p5.Vector(xPos, yPos, zPos));
+
+      points.push(point);
+
+      if (col > 0) {
+        const leftPoint = points[points.length - 2];
+        edges.push(new Edge(point, leftPoint));
+      }
+
+      if (row > 0) {
+        const abovePoint = points[(row - 1) * cols + col];
+        edges.push(new Edge(point, abovePoint));
+
+        if (col > 0) {
+          const topLeftPoint = points[(row - 1) * cols + (col - 1)];
+          edges.push(new Edge(point, topLeftPoint));
+        }
+
+        if (col < cols - 1) {
+          const topRightPoint = points[(row - 1) * cols + (col + 1)];
+          edges.push(new Edge(point, topRightPoint));
+        }
+      }
+    }
+  }
+
+  return {points, edges};
+};

@@ -4,7 +4,7 @@ import p5 from "p5";
 export class Edge {
   restLength = 20;
 
-  constructor(private PointA: Point, private PointB: Point) {}
+  constructor(public PointA: Point, public PointB: Point) {}
 
   update(
     edgeUpdateFn: (a: Point, b: Point) => void,
@@ -28,8 +28,10 @@ export class Edge {
     p.line(
       this.PointA.pos.x,
       this.PointA.pos.y,
+      this.PointA.pos.z,
       this.PointB.pos.x,
-      this.PointB.pos.y
+      this.PointB.pos.y,
+      this.PointB.pos.z
     );
     p.fill("red");
     if (this.PointA.inside) p.circle(this.PointA.pos.x, this.PointA.pos.y, 5);
