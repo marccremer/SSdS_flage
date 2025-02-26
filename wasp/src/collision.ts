@@ -128,8 +128,6 @@ export function handleSphereCollisionCCD(
       point.pos.add(normal.copy().mult(penetration + 0.001));
       point.velocity.mult(0.95)
     }
-    point.pos.add(normal.mult(penetration + 0.001));
-    point.velocity.mult(0.95);
 
     oldPos.set(point.pos);
   }

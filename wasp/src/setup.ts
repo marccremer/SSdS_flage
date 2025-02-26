@@ -80,21 +80,29 @@ export const generateGridXZ = (
 
       if (col > 0) {
         const leftPoint = points[points.length - 2];
-        edges.push(new Edge(point, leftPoint));
+        const edge = new Edge(point, leftPoint);
+        edge.restLength = point.pos.dist(leftPoint.pos);
+        edges.push(edge);
       }
 
       if (row > 0) {
         const abovePoint = points[(row - 1) * cols + col];
-        edges.push(new Edge(point, abovePoint));
+        const edge = new Edge(point, abovePoint);
+        edge.restLength = point.pos.dist(abovePoint.pos);
+        edges.push(edge);
 
         if (col > 0) {
           const topLeftPoint = points[(row - 1) * cols + (col - 1)];
-          edges.push(new Edge(point, topLeftPoint));
+          const diagEdge = new Edge(point, topLeftPoint);
+          diagEdge.restLength = point.pos.dist(topLeftPoint.pos);
+          edges.push(diagEdge);
         }
 
         if (col < cols - 1) {
           const topRightPoint = points[(row - 1) * cols + (col + 1)];
-          edges.push(new Edge(point, topRightPoint));
+          const diagEdge = new Edge(point, topRightPoint);
+          diagEdge.restLength = point.pos.dist(topRightPoint.pos);
+          edges.push(diagEdge);
         }
       }
     }

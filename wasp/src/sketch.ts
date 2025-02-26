@@ -90,7 +90,7 @@ const sketch = (p: p5) => {
         .addButton("stop recording", controller.onRecordStop)
         //title, min, max, value, step, callback
         .addRange("Gravity", 0.05, 0.3, 0.05, 0.05, controller.onGravity)
-        .addRange("Wind", 0, 0.5, 0.03, 0.01, controller.onWind)
+        .addRange("Wind", 0, 0.5, 0.0, 0.005, controller.onWind)
         .addBoolean("showGrid", false, controller.onGrid);
     }
 
@@ -108,9 +108,9 @@ const sketch = (p: p5) => {
 
     gravity.set(0, gravityValue, 0);
     wind.set(
-      0,
-      0 > 0 ? p.random(-0.1, 0.1) : 0,
-      0 > 0 ? p.random(-0.5, 0.5) : 0
+      windValue,
+        windValue > 0 ? p.random(-0.1, 0.1) : 0,
+        windValue > 0 ? p.random(-0.5, 0.5) : 0
     );
 
     {
@@ -138,11 +138,13 @@ const sketch = (p: p5) => {
 
               point.update();
 
-              handleSphereCollisionSebi(point, sphereCenter, sphereRadius);
+
+
+              handleSphereCollisionCCD(point, sphereCenter, sphereRadius);
+              point.collideWithBox(floor);
             }
           }
         }
-
       }
     }
 
