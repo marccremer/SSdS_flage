@@ -7,10 +7,10 @@ import { exportVideo, initializeRecorder } from "./recording";
 import {generateGrid, generateGridXZ} from "./setup";
 import {applyImageTextureToShape, drawClothIn3D} from "./proto";
 import {
-  handleSphereCollision,
-  handleSphereCollisionCCD,
-  handleSphereCollisionSebi,
-  updatePointWithSubSteps
+  Collider,
+  BoxCollider,
+  SphereCollider,
+  handleCollisions
 } from "./collision.ts";
 import { Box } from "./Box.ts";
 const width = window.innerWidth;
@@ -38,8 +38,12 @@ const sketch = (p: p5) => {
   let showGrid = false;
   let paused = false;
   const floor = new Box(new p5.Vector(0, 600, 0), 3000, 10, 5000);
-  const sphereCenter = p.createVector(300, 350, 100);
-  const sphereRadius = 200;
+
+
+  const colliders: Collider[] = [
+    //new SphereCollider(new p5.Vector(300, 350, 100), 200),
+    new BoxCollider(new p5.Vector(300,300,100), new p5.Vector(100, 100, 100))
+  ]
   let shoudlGuiUpdate = 0;
   const GUI_fps = 60;
   p.setup = () => {
@@ -140,7 +144,7 @@ const sketch = (p: p5) => {
 
 
 
-              handleSphereCollisionCCD(point, sphereCenter, sphereRadius);
+              handleCollisions(point, colliders);
               point.collideWithBox(floor);
             }
           }
@@ -155,11 +159,9 @@ const sketch = (p: p5) => {
     } else {
       drawClothIn3D(p, points, GRID_COLS, GRID_ROWS);
     }
-    p.push();
-    p.stroke(0, 200, 0);
-    p.translate(sphereCenter.x, sphereCenter.y, sphereCenter.z);
-    p.sphere(sphereRadius);
-    p.pop();
+   for (const collider of colliders){
+     collider.draw(p);
+   }
     floor.draw(p);
   };
 };

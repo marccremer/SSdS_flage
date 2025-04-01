@@ -1,112 +1,114 @@
 import p5 from "p5";
 import { Point } from "./Point";
-import {normalizePath} from "vite";
 
-interface Sphere {
+
+export interface Collider{
+
+  checkCollision(point: Point): boolean;
+  resolveCollision(point: Point): void;
+  draw(p: p5):void;
+}
+
+export class SphereCollider implements Collider{
+
+  constructor(public center: p5.Vector, public radius: number) {}
+
+  checkCollision(point: Point): boolean{
+
+    return point.pos.dist(this.center) < this.radius;
+  }
+
+  resolveCollision(point: Point) {
+    handleSphereCollisionCCD(point, this.center, this.radius)
+  }
+
+  draw(p: p5){
+
+    p.push();
+    p.stroke(0, 200,0);
+    p.noFill();
+    p.translate(this.center.x, this.center.y, this.center.z);
+    p.sphere(this.radius);
+    p.pop();
+  }
+
+}
+
+export class BoxCollider implements Collider{
+
   center: p5.Vector;
-  radius: number;
-}
+  size: p5.Vector;
+  min: p5.Vector;
+  max: p5.Vector;
 
-export function updatePointWithSubSteps(
-    point: Point,
-    sphereCenter: p5.Vector,
-    sphereRadius: number,
-    gravity: p5.Vector,
-    wind: p5.Vector,
-    subSteps: number
-) {
+  constructor(center: p5.Vector, size: p5.Vector) {
+    this.center = center.copy();
+    this.size = size.copy();
+    this.min = p5.Vector.sub(this.center.copy(), this.size.copy().div(2));
+    this.max = p5.Vector.add(this.center.copy(), this.size.copy().div(2));
 
-  const partialGravity = gravity.copy().div(subSteps);
-  const partialWind = wind.copy().div(subSteps);
+    this.min.set(
+        this.center.x - this.size.x / 2,
+        this.center.y - this.size.y / 2,
+        this.center.z - this.size.z / 2
+    );
+    this.max.set(
+        this.center.x + this.size.x / 2,
+        this.center.y + this.size.y / 2,
+        this.center.z + this.size.z / 2
+    );
+  }
 
-  for (let i = 0; i < subSteps; i++) {
+  checkCollision(point: Point): boolean {
 
-    point.applyForce(partialGravity);
-    point.applyForce(partialWind);
+    const pos = point.pos;
+    return (
+        pos.x >= this.min.x && pos.x <= this.max.x &&
+        pos.y >= this.min.y && pos.y <= this.max.y &&
+        pos.z >= this.min.z && pos.z <= this.max.z
+    );
+  }
 
-    point.update();
+  resolveCollision(point: Point) {
 
-    handleSphereCollisionCCD(point, sphereCenter, sphereRadius);
+
+    const overlapX = Math.min(this.max.x - point.pos.x, point.pos.x - this.min.x);
+    const overlapY = Math.min(this.max.y - point.pos.y, point.pos.y - this.min.y);
+    const overlapZ = Math.min(this.max.z - point.pos.z, point.pos.z - this.min.z);
+
+    if (overlapX <= overlapY && overlapX <= overlapZ) {
+      point.pos.x = point.pos.x < this.center.x ? this.min.x: this.max.x;
+      point.velocity.x = 0;
+    } else if (overlapY <= overlapX && overlapY <= overlapZ) {
+      point.pos.y = point.pos.y < this.center.y ? this.min.y: this.max.y;
+      point.velocity.y = 0;
+    } else {
+      point.pos.z = point.pos.z < this.center.z ? this.min.z: this.max.z;
+      point.velocity.z = 0;
+    }
+
+    point.velocity.mult(0.9);
+  }
+
+  draw(p: p5) {
+    p.push();
+    p.stroke(0, 0, 200);
+    p.noFill();
+    p.translate(this.center.x, this.center.y, this.center.z);
+    p.box(this.size.x, this.size.y, this.size.z); // Sicherstellen, dass `size` korrekt ist
+    p.pop();
+
+    console.log("Min:", this.min, "Max:", this.max, "Size:", this.size);
   }
 }
 
-export function handleSphereCollision(
-  point: Point,
-  sphereCenter: p5.Vector,
-  sphereRadius: number,
-  p: p5
-) {
-  const sphere: Sphere = { center: sphereCenter, radius: sphereRadius };
-  const nextPoint = point.nextPoint();
-  if (pointSphereCollision(nextPoint, sphere)) {
-    point.inside = true;
-    point.collideWithSphere(sphere.center, sphere.radius);
+export function handleCollisions(point: Point, colliders: Collider[]){
+  for(const collider of colliders){
+    if(collider.checkCollision(point)){
+      collider.resolveCollision(point);
+    }
+
   }
-
-  // resolvePointSphereCollision(point, sphere);
-}
-
-function pointSphereCollision(pos: p5.Vector, sphere: Sphere): boolean {
-  const distance = pos.dist(sphere.center);
-  return distance <= sphere.radius;
-}
-
-function resolvePointSphereCollision(point: Point, sphere: Sphere): void {
-  // Calculate the collision normal (vector from sphere center to point)
-  const pos = point.pos.copy();
-  const collisionNormal = pos.sub(sphere.center).normalize();
-
-  // Calculate the relative velocity
-  const relativeVelocity = point.velocity.copy(); // Assuming sphere is static
-
-  // Calculate the impulse scalar (dot product of relative velocity and collision normal)
-  const impulseScalar = relativeVelocity.dot(collisionNormal);
-
-  // If the point is moving away from the sphere, no need to resolve
-  /*if (impulseScalar > 0) {
-    return;
-  }*/
-
-  // Calculate the impulse vector
-  const impulse = collisionNormal.mult(-impulseScalar);
-
-  // Apply the impulse to the point's velocity (basic reflection)
-  point.velocity.add(impulse);
-
-  // Separate the point from the sphere (move it along the collision normal)
-  const penetrationDepth = sphere.radius - point.pos.dist(sphere.center);
-  point.pos.add(collisionNormal.mult(penetrationDepth));
-}
-
-export function handleSphereCollisionSebi(
-    point: Point,
-    sphereCenter: p5.Vector,
-    sphereRadius: number
-){
-
-  const offset = p5.Vector.sub(point.pos, sphereCenter);
-  const distance = offset.mag();
-
-  if (distance < sphereRadius){
-
-    const normal = offset.copy().normalize();
-
-    /*point.pos.set(
-
-      sphereCenter.x + normal.x * sphereRadius,
-      sphereCenter.y + normal.y * sphereRadius,
-      sphereCenter.z + normal.z * sphereRadius
-    );*/
-
-    const dot = point.velocity.dot(normal);
-
-
-    const normalPart = normal.copy().mult(dot);
-    const tangential = p5.Vector.sub(point.velocity, normalPart);
-
-    point.velocity = tangential.mult(0.95);
-  }
-
 }
 
 export function handleSphereCollisionCCD(
