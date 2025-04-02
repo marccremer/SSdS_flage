@@ -8,7 +8,7 @@ export const generateGrid = (
 ): { points: Point[]; edges: Edge[] } => {
   const points: Point[] = [];
   const edges: Edge[] = [];
-  const spacing = 20;
+  const spacing =20;
 
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
@@ -65,7 +65,7 @@ export const generateGridXZ = (
 
   const points: Point[] = [];
   const edges: Edge[] = [];
-  const spacing = 20;
+  const spacing = 3;
 
   for(let row = 0; row < rows; row++){
     for(let col = 0; col < cols ; col++){
