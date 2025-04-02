@@ -8,9 +8,10 @@ import {generateGrid, generateGridXZ} from "./setup";
 import {applyImageTextureToShape, drawClothIn3D} from "./proto";
 import {
   Collider,
+  handleCollisions,
   BoxCollider,
   SphereCollider,
-  handleCollisions
+  ConeCollider
 } from "./collision.ts";
 import { Box } from "./Box.ts";
 const width = window.innerWidth;
@@ -37,12 +38,13 @@ const sketch = (p: p5) => {
   let panel: QuickSettings;
   let showGrid = false;
   let paused = false;
-  const floor = new Box(new p5.Vector(0, 600, 0), 3000, 10, 5000);
 
 
   const colliders: Collider[] = [
-    //new SphereCollider(new p5.Vector(300, 350, 100), 200),
-    new BoxCollider(new p5.Vector(300,300,100), new p5.Vector(100, 100, 100))
+    new SphereCollider(new p5.Vector(150, 250, 20), 50),
+    new BoxCollider(new p5.Vector(100,200,20), new p5.Vector(100, 100, 100)),
+    new BoxCollider(new p5.Vector(0, 600, 0), new p5.Vector(3000, 10, 5000)),
+    new ConeCollider(new p5.Vector(-200, 250, 20), 50,100)
   ]
   let shoudlGuiUpdate = 0;
   const GUI_fps = 60;
@@ -142,10 +144,18 @@ const sketch = (p: p5) => {
 
               point.update();
 
-
-
               handleCollisions(point, colliders);
-              point.collideWithBox(floor);
+            }
+          }
+
+          for(const edge of edges){
+
+            for(const collider of colliders){
+
+              if(collider instanceof BoxCollider){
+
+                collider.resolveEdgeCollision(edge.PointA, edge.PointB);
+              }
             }
           }
         }
@@ -162,7 +172,6 @@ const sketch = (p: p5) => {
    for (const collider of colliders){
      collider.draw(p);
    }
-    floor.draw(p);
   };
 };
 

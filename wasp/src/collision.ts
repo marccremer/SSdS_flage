@@ -28,13 +28,43 @@ export class SphereCollider implements Collider {
   }
 }
 
+export class ConeCollider implements Collider {
+  public baseCenter: p5.Vector;
+  public height: number;
+  public baseRadius: number;
+
+  constructor(baseCenter: p5.Vector, baseRadius: number, height: number) {
+    this.baseCenter = baseCenter.copy();
+    this.baseRadius = baseRadius;
+    this.height = height;
+  }
+
+  checkCollision(point: Point): boolean {
+    return true;
+  }
+
+  resolveCollision(point: Point) {
+    return;
+  }
+
+  draw(p: p5) {
+    p.push();
+    p.translate(
+      this.baseCenter.x,
+      this.baseCenter.y - this.height / 2,
+      this.baseCenter.z
+    );
+    p.rotateX(p.PI);
+    p.cone(this.baseRadius, this.height);
+    p.pop();
+  }
+}
+
 export class BoxCollider implements Collider {
-  center: p5.Vector;
-  size: p5.Vector;
   min: p5.Vector;
   max: p5.Vector;
 
-  constructor(center: p5.Vector, size: p5.Vector) {
+  constructor(public center: p5.Vector, public size: p5.Vector) {
     this.center = center.copy();
     this.size = size.copy();
     this.min = p5.Vector.sub(this.center.copy(), this.size.copy().div(2));
@@ -90,18 +120,111 @@ export class BoxCollider implements Collider {
       point.velocity.z = 0;
     }
 
-    point.velocity.mult(0.9);
+    point.velocity.mult(0.95);
   }
 
   draw(p: p5) {
     p.push();
     p.stroke(0, 0, 200);
-    p.noFill();
+    p.fill(200, 200, 200);
     p.translate(this.center.x, this.center.y, this.center.z);
-    p.box(this.size.x, this.size.y, this.size.z); // Sicherstellen, dass `size` korrekt ist
+    p.box(this.size.x, this.size.y, this.size.z);
     p.pop();
 
     console.log("Min:", this.min, "Max:", this.max, "Size:", this.size);
+  }
+
+  checkEdgeCollision(
+    start: p5.Vector,
+    end: p5.Vector
+  ): { collides: boolean; normal?: p5.Vector; point?: p5.Vector } {
+    // Implementierung des 3D-Line-vs-AABB-Tests
+    const dir = p5.Vector.sub(end, start);
+    let tMin = 0.0;
+    let tMax = 1.0;
+    let collisionAxis: "x" | "y" | "z" | null = null;
+
+    // Teste alle 3 Achsen
+    for (const axis of ["x", "y", "z"] as const) {
+      if (Math.abs(dir[axis]) < 0.000001) {
+        // Linie ist parallel zur Achse
+        if (start[axis] < this.min[axis] || start[axis] > this.max[axis]) {
+          return { collides: false };
+        }
+        continue;
+      }
+
+      const invDir = 1.0 / dir[axis];
+      let t1 = (this.min[axis] - start[axis]) * invDir;
+      let t2 = (this.max[axis] - start[axis]) * invDir;
+
+      if (t1 > t2) [t1, t2] = [t2, t1];
+
+      if (t1 > tMin) {
+        tMin = t1;
+        collisionAxis = axis;
+      }
+
+      tMax = Math.min(tMax, t2);
+
+      if (tMin > tMax) return { collides: false };
+    }
+
+    if (tMin < 0 || tMax > 1) return { collides: false };
+
+    const collisionPoint = p5.Vector.add(start, dir.mult(tMin));
+    const normal = collisionAxis
+      ? this.calculateCollisionNormal(collisionPoint, collisionAxis)
+      : new p5.Vector(0, 0, 0);
+
+    return {
+      collides: true,
+      normal: normal.normalize(),
+      point: collisionPoint,
+    };
+  }
+
+  private calculateCollisionNormal(
+    point: p5.Vector,
+    collisionAxis: "x" | "y" | "z"
+  ): p5.Vector {
+    const normal = new p5.Vector();
+    const axisCenter = this.center[collisionAxis];
+    const pointPos = point[collisionAxis];
+
+    if (pointPos < axisCenter) {
+      normal[collisionAxis] = -1;
+    } else {
+      normal[collisionAxis] = 1;
+    }
+
+    return normal;
+  }
+
+  resolveEdgeCollision(start: Point, end: Point) {
+    const result = this.checkEdgeCollision(start.pos, end.pos);
+
+    if (!result.collides || !result.normal || !result.point) return;
+
+    const penetration = 0.5;
+    const correction = result.normal.copy().mult(penetration);
+
+    const totalDist = start.pos.dist(end.pos);
+    const weightStart = end.pos.dist(result.point) / totalDist;
+    const weightEnd = start.pos.dist(result.point) / totalDist;
+
+    if (!start.locked) {
+      const correctionStart = correction.copy().mult(weightStart);
+      start.pos.add(correctionStart);
+    }
+
+    if (!end.locked) {
+      const correctionEnd = correction.copy().mult(weightEnd);
+      end.pos.add(correctionEnd);
+    }
+
+    start.velocity.reflect(result.normal).mult(0.95);
+    end.velocity.reflect(result.normal).mult(0.95);
   }
 }
 
