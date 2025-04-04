@@ -4,14 +4,14 @@ import { Edge } from "./Edge";
 import { assertNotNull, createStyledButton } from "./utils";
 import { applySpringForce } from "./spring";
 import { exportVideo, initializeRecorder } from "./recording";
-import {generateGrid, generateGridXZ} from "./setup";
-import {applyImageTextureToShape, drawClothIn3D} from "./proto";
+import { generateGrid, generateGridXZ } from "./setup";
+import { applyImageTextureToShape, drawClothIn3D } from "./proto";
 import {
   Collider,
   handleCollisions,
   BoxCollider,
   SphereCollider,
-  ConeCollider
+  ConeCollider,
 } from "./collision.ts";
 import { Box } from "./Box.ts";
 const width = window.innerWidth;
@@ -27,7 +27,7 @@ var easycam;
 
 const sketch = (p: p5) => {
   const b = p.color(255, 255, 255);
-  let { edges, points } = generateGridXZ(GRID_COLS, GRID_ROWS);
+  let { edges, points } = generateGridXZ(GRID_COLS, GRID_ROWS, 10);
   let canvas: HTMLCanvasElement;
   const flags = {
     germany: p.loadImage("germany.png"),
@@ -39,13 +39,12 @@ const sketch = (p: p5) => {
   let showGrid = false;
   let paused = false;
 
-
   const colliders: Collider[] = [
     //new SphereCollider(new p5.Vector(150, 250, 20), 50),
-    new BoxCollider(new p5.Vector(100,200,20), new p5.Vector(100, 100, 100)),
+    new BoxCollider(new p5.Vector(100, 200, 20), new p5.Vector(100, 100, 100)),
     new BoxCollider(new p5.Vector(0, 600, 0), new p5.Vector(3000, 10, 5000)),
-    new ConeCollider(new p5.Vector(170, 250, 40), 90,100)
-  ]
+    new ConeCollider(new p5.Vector(150, 250, 40), 90, 100),
+  ];
   let shoudlGuiUpdate = 0;
   const GUI_fps = 60;
   p.setup = () => {
@@ -115,8 +114,8 @@ const sketch = (p: p5) => {
     gravity.set(0, gravityValue, 0);
     wind.set(
       windValue,
-        windValue > 0 ? p.random(-0.1, 0.1) : 0,
-        windValue > 0 ? p.random(-0.5, 0.5) : 0
+      windValue > 0 ? p.random(-0.1, 0.1) : 0,
+      windValue > 0 ? p.random(-0.5, 0.5) : 0
     );
 
     {
@@ -124,21 +123,17 @@ const sketch = (p: p5) => {
       if (!paused) {
         const subSteps = 5;
         for (let step = 0; step < subSteps; step++) {
-
-          for (const edge of edges){
-
+          for (const edge of edges) {
             applySpringForce(edge.PointA, edge.PointB, {
               restLength: edge.restLength,
               springConstant: springConstant / subSteps,
             });
           }
 
-          for (const point of points){
-
+          for (const point of points) {
             point.inside = false;
 
-            if(!point.locked){
-
+            if (!point.locked) {
               point.applyForce(gravity.copy().div(subSteps));
               point.applyForce(wind.copy().div(subSteps));
 
@@ -148,12 +143,9 @@ const sketch = (p: p5) => {
             }
           }
 
-          for(const edge of edges){
-
-            for(const collider of colliders){
-
-              if(collider instanceof BoxCollider){
-
+          for (const edge of edges) {
+            for (const collider of colliders) {
+              if (collider instanceof BoxCollider) {
                 collider.resolveEdgeCollision(edge.PointA, edge.PointB);
               }
             }
@@ -169,9 +161,9 @@ const sketch = (p: p5) => {
     } else {
       drawClothIn3D(p, points, GRID_COLS, GRID_ROWS);
     }
-   for (const collider of colliders){
-     collider.draw(p);
-   }
+    for (const collider of colliders) {
+      collider.draw(p);
+    }
   };
 };
 

@@ -29,70 +29,63 @@ export class SphereCollider implements Collider {
 }
 
 export class ConeCollider implements Collider {
-  origin: p5.Vector;
-  angle: number; // in degrees
-  height: number;
-
-  constructor(origin: p5.Vector, angle: number, height: number) {
-    this.origin = origin.copy();
-    this.angle = angle;
-    this.height = height;
-  }
-
-  checkCollision(point: Point): boolean {
-    const toPoint = p5.Vector.sub(point.pos, this.origin);
-
-    const forward = new p5.Vector(0, 0, -1);
-    const projection = toPoint.dot(forward);
-
-    if (projection < 0 || projection > this.height) return false;
-
-    const radial = p5.Vector.sub(toPoint, forward.copy().mult(projection));
-    const maxRadius =
-      Math.tan(p5.prototype.radians(this.angle / 2)) * projection;
-
-    return radial.mag() <= maxRadius;
-  }
-
-  resolveCollision(point: Point) {
-    const toPoint = p5.Vector.sub(point.pos, this.origin);
-    const forward = new p5.Vector(0, 0, -1);
-    const projection = toPoint.dot(forward);
-    const clampedProjection = p5.prototype.constrain(
-      projection,
-      0.01,
-      this.height
-    );
-
-    const axisPoint = p5.Vector.add(
+  apex: p5.Vector;
+  axis: p5.Vector;
+  constructor(
+    private origin: p5.Vector,
+    private height: number,
+    public baseRadius: number
+  ) {
+    this.apex = p5.Vector.sub(
       this.origin,
-      forward.copy().mult(clampedProjection)
-    );
-    let radial = p5.Vector.sub(point.pos, axisPoint);
-    if (radial.mag() === 0) radial = new p5.Vector(1, 0, 0);
+      new p5.Vector(0, this.height / 2, 0)
+    ).copy(); // tip of the cone
+    this.axis = new p5.Vector(0, 1, 0);
+  }
+  // Checks if the point is inside the cone
+  checkCollision(point: Point) {
+    const AP = p5.Vector.sub(point.pos, this.apex); // vector from apex to point
+    const t = p5.Vector.dot(AP, this.axis); // projection length along the cone's axis
 
-    radial.normalize();
-    const maxRadius =
-      Math.tan(p5.prototype.radians(this.angle / 2)) * clampedProjection;
-    const resolvedPos = axisPoint.copy().add(radial.mult(maxRadius));
+    if (t < 0 || t > this.height) return false; // outside vertical extent
 
-    point.pos.x = resolvedPos.x;
-    point.pos.y = resolvedPos.y;
-    point.pos.z = resolvedPos.z;
+    const proj = this.axis.copy().mult(t); // projected vector
+    const radialVec = p5.Vector.sub(AP, proj); // radial offset from axis
+    const radiusAtT = (t / this.height) * this.baseRadius;
+
+    const ding = radialVec.mag() <= radiusAtT;
+    //if (ding) point.inside = true;
+    return ding;
+  }
+
+  resolveCollision(point: Point): void {
+    const AP = p5.Vector.sub(point.pos, this.apex);
+    const t = p5.Vector.dot(AP, this.axis);
+
+    if (t < 0 || t > this.height) return; // no collision to resolve
+
+    const proj = this.axis.copy().mult(t); // projected vector
+    const radialVec = p5.Vector.sub(AP, proj);
+    const dist = radialVec.mag();
+    const radiusAtT = (t / this.height) * this.baseRadius;
+
+    if (dist < radiusAtT) {
+      // push the point to the surface of the cone
+      const correction = radialVec.copy().setMag(radiusAtT - dist);
+      point.pos.add(correction);
+    }
   }
 
   draw(p: p5) {
     p.push();
-    p.stroke(0, 255, 0);
-    p.sphere(5);
     p.translate(this.origin.x, this.origin.y, this.origin.z);
-    p.rotateX(p.HALF_PI);
-    p.stroke(0, 0, 255);
-    p.sphere(5);
-    const baseRadius = Math.tan(p.radians(this.angle / 2)) * this.height;
-    p.noFill();
-    p.stroke(255, 100, 100);
-    p.cone(baseRadius, this.height);
+    p.rotateX(p.PI);
+    p.stroke("blue");
+    p.sphere(4); // cone origin
+    p.cone(this.baseRadius, this.height, 24, 2);
+    p.pop();
+    p.push();
+    p.translate(this.apex.x, this.apex.y, this.apex.z);
     p.pop();
   }
 }

@@ -4,11 +4,11 @@ import { Point } from "./Point";
 
 export const generateGrid = (
   cols: number,
-  rows: number
+  rows: number,
+  spacing = 20
 ): { points: Point[]; edges: Edge[] } => {
   const points: Point[] = [];
   const edges: Edge[] = [];
-  const spacing =20;
 
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
@@ -59,17 +59,15 @@ export const generateGrid = (
 };
 
 export const generateGridXZ = (
-    cols: number,
-    rows: number
-): {points: Point[]; edges: Edge[]} => {
-
+  cols: number,
+  rows: number,
+  spacing = 3
+): { points: Point[]; edges: Edge[] } => {
   const points: Point[] = [];
   const edges: Edge[] = [];
-  const spacing = 3;
 
-  for(let row = 0; row < rows; row++){
-    for(let col = 0; col < cols ; col++){
-
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
       const xPos = col * spacing;
       const zPos = row * spacing;
       const yPos = 0;
@@ -108,5 +106,5 @@ export const generateGridXZ = (
     }
   }
 
-  return {points, edges};
+  return { points, edges };
 };
