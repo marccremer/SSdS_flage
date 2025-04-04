@@ -34,8 +34,21 @@ export class Edge {
       this.PointB.pos.z
     );
     p.fill("red");
-    if (this.PointA.inside) p.circle(this.PointA.pos.x, this.PointA.pos.y, 5);
-    if (this.PointB.inside) p.circle(this.PointB.pos.x, this.PointB.pos.y, 5);
+    if (this.PointA.inside) {
+      const { x, y, z } = this.PointA.pos;
+      p.push();
+      p.translate(x, y, z);
+      p.sphere(5, 20, 20);
+      p.pop();
+    }
+
+    if (this.PointB.inside) {
+      const { x, y, z } = this.PointB.pos;
+      p.push();
+      p.translate(x, y, z);
+      p.sphere(5, 20, 20);
+      p.pop();
+    }
     p.noFill();
   }
 }

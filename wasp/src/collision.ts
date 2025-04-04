@@ -35,48 +35,22 @@ export class SphereCollider implements Collider{
 }
 
 export class ConeCollider implements Collider {
-  origin: p5.Vector;
-  angle: number; // in degrees
-  height: number;
+  public baseCenter: p5.Vector;
+  public height: number;
+  public baseRadius: number;
 
-  constructor(origin: p5.Vector, angle: number, height: number) {
-    this.origin = origin.copy();
-    this.angle = angle;
+  constructor(baseCenter: p5.Vector, baseRadius: number, height: number) {
+    this.baseCenter = baseCenter.copy();
+    this.baseRadius = baseRadius;
     this.height = height;
   }
 
   checkCollision(point: Point): boolean {
-    const toPoint = p5.Vector.sub(point.pos, this.origin);
-
-    const forward = new p5.Vector(0, 0, -1);
-    const projection = toPoint.dot(forward);
-
-    if (projection < 0 || projection > this.height) return false;
-
-    const radial = p5.Vector.sub(toPoint, forward.copy().mult(projection));
-    const maxRadius = Math.tan(p5.prototype.radians(this.angle / 2)) * projection;
-
-    return radial.mag() <= maxRadius;
+    return true;
   }
 
   resolveCollision(point: Point) {
-
-    const toPoint = p5.Vector.sub(point.pos, this.origin);
-    const forward = new p5.Vector(0, 0, -1);
-    const projection = toPoint.dot(forward);
-    const clampedProjection = p5.prototype.constrain(projection, 0.01, this.height);
-
-    const axisPoint = p5.Vector.add(this.origin, forward.copy().mult(clampedProjection));
-    let radial = p5.Vector.sub(point.pos, axisPoint);
-    if (radial.mag() === 0) radial = new p5.Vector(1, 0, 0);
-
-    radial.normalize();
-    const maxRadius = Math.tan(p5.prototype.radians(this.angle / 2)) * clampedProjection;
-    const resolvedPos = axisPoint.copy().add(radial.mult(maxRadius));
-
-    point.pos.x = resolvedPos.x;
-    point.pos.y = resolvedPos.y;
-    point.pos.z = resolvedPos.z;
+    return;
   }
 
   draw(p: p5) {
@@ -264,6 +238,7 @@ export function handleCollisions(point: Point, colliders: Collider[]){
 
       collider.resolveCollision(point);
     }
+
   }
 }
 
