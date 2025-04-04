@@ -75,7 +75,7 @@ export function drawClothIn3D(
 
   p.push();
   p.noStroke();
-  p.fill(200); // beliebige Farbe oder Material
+  p.fill('red'); // beliebige Farbe oder Material
 
   p.beginShape(p.TRIANGLES);
 

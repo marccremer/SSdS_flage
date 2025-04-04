@@ -35,33 +35,62 @@ export class SphereCollider implements Collider{
 }
 
 export class ConeCollider implements Collider {
-  public baseCenter: p5.Vector;
-  public height: number;
-  public baseRadius: number;
+  origin: p5.Vector;
+  angle: number; // in degrees
+  height: number;
 
-  constructor(baseCenter: p5.Vector, baseRadius: number, height: number) {
-    this.baseCenter = baseCenter.copy();
-    this.baseRadius = baseRadius;
+  constructor(origin: p5.Vector, angle: number, height: number) {
+    this.origin = origin.copy();
+    this.angle = angle;
     this.height = height;
   }
 
   checkCollision(point: Point): boolean {
-    return true;
+    const toPoint = p5.Vector.sub(point.pos, this.origin);
+
+    const forward = new p5.Vector(0, 0, -1);
+    const projection = toPoint.dot(forward);
+
+    if (projection < 0 || projection > this.height) return false;
+
+    const radial = p5.Vector.sub(toPoint, forward.copy().mult(projection));
+    const maxRadius = Math.tan(p5.prototype.radians(this.angle / 2)) * projection;
+
+    return radial.mag() <= maxRadius;
   }
 
   resolveCollision(point: Point) {
-    return;
+
+    const toPoint = p5.Vector.sub(point.pos, this.origin);
+    const forward = new p5.Vector(0, 0, -1);
+    const projection = toPoint.dot(forward);
+    const clampedProjection = p5.prototype.constrain(projection, 0.01, this.height);
+
+    const axisPoint = p5.Vector.add(this.origin, forward.copy().mult(clampedProjection));
+    let radial = p5.Vector.sub(point.pos, axisPoint);
+    if (radial.mag() === 0) radial = new p5.Vector(1, 0, 0);
+
+    radial.normalize();
+    const maxRadius = Math.tan(p5.prototype.radians(this.angle / 2)) * clampedProjection;
+    const resolvedPos = axisPoint.copy().add(radial.mult(maxRadius));
+
+    point.pos.x = resolvedPos.x;
+    point.pos.y = resolvedPos.y;
+    point.pos.z = resolvedPos.z;
   }
 
   draw(p: p5) {
     p.push();
-    p.translate(
-        this.baseCenter.x,
-        this.baseCenter.y - this.height/2,
-        this.baseCenter.z
-    );
-    p.rotateX(p.PI);
-    p.cone(this.baseRadius, this.height);
+    p.stroke(0, 255, 0);
+    p.sphere(5)
+    p.translate(this.origin.x, this.origin.y, this.origin.z);
+    p.rotateX(p.HALF_PI);
+    p.stroke(0, 0, 255);
+    p.sphere(5)
+    const baseRadius = Math.tan(p.radians(this.angle/2)) * this.height;
+    p.noFill();
+    p.stroke(255, 100, 100);
+    p.cone(baseRadius, this.height);
     p.pop();
   }
 }
@@ -228,11 +257,13 @@ export class BoxCollider implements Collider{
 }
 
 export function handleCollisions(point: Point, colliders: Collider[]){
+
   for(const collider of colliders){
+
     if(collider.checkCollision(point)){
+
       collider.resolveCollision(point);
     }
-
   }
 }
 

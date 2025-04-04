@@ -41,10 +41,10 @@ const sketch = (p: p5) => {
 
 
   const colliders: Collider[] = [
-    new SphereCollider(new p5.Vector(150, 250, 20), 50),
+    //new SphereCollider(new p5.Vector(150, 250, 20), 50),
     new BoxCollider(new p5.Vector(100,200,20), new p5.Vector(100, 100, 100)),
     new BoxCollider(new p5.Vector(0, 600, 0), new p5.Vector(3000, 10, 5000)),
-    new ConeCollider(new p5.Vector(-200, 250, 20), 50,100)
+    new ConeCollider(new p5.Vector(170, 250, 40), 90,100)
   ]
   let shoudlGuiUpdate = 0;
   const GUI_fps = 60;
