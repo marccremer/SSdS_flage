@@ -64,15 +64,24 @@ export class ConeCollider implements Collider {
 
     if (t < 0 || t > this.height) return; // no collision to resolve
 
-    const proj = this.axis.copy().mult(t); // projected vector
+    const proj = this.axis.copy().mult(t); // projection on cone axis
     const radialVec = p5.Vector.sub(AP, proj);
     const dist = radialVec.mag();
     const radiusAtT = (t / this.height) * this.baseRadius;
 
     if (dist < radiusAtT) {
-      // push the point to the surface of the cone
+      // --- Push point to surface ---
       const correction = radialVec.copy().setMag(radiusAtT - dist);
       point.pos.add(correction);
+
+      // --- Resolve velocity ---
+      const normal = radialVec.copy().normalize();
+      const velAlongNormal = normal
+        .copy()
+        .mult(p5.Vector.dot(point.velocity, normal));
+
+      const bounce = 0.5; // adjust from 0 (no bounce) to 1 (perfect bounce)
+      point.velocity.sub(velAlongNormal.mult(1 + bounce));
     }
   }
 
