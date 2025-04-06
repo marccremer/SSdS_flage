@@ -4,15 +4,17 @@ import { Edge } from "./Edge";
 import { assertNotNull, createStyledButton } from "./utils";
 import { applySpringForce } from "./spring";
 import { exportVideo, initializeRecorder } from "./recording";
-import {generateGrid, generateGridXZ} from "./setup";
-import {applyImageTextureToShape, drawClothIn3D} from "./proto";
+import { generateGrid, generateGridXZ } from "./setup";
+import { applyImageTextureToShape, drawClothIn3D } from "./proto";
 import {
   Collider,
   handleCollisions,
   BoxCollider,
+  SphereCollider,
+  ConeCollider,
 } from "./collision.ts";
 import { Box } from "./Box.ts";
-import {scenes} from "./scenes.ts";
+import { scenes } from "./scenes.ts";
 const width = window.innerWidth;
 const height = window.innerHeight;
 
@@ -26,7 +28,7 @@ var easycam;
 
 const sketch = (p: p5) => {
   const b = p.color(255, 255, 255);
-  let { edges, points } = generateGridXZ(GRID_COLS, GRID_ROWS, true);
+  let { edges, points } = generateGridXZ(GRID_COLS, GRID_ROWS, 10);
   let canvas: HTMLCanvasElement;
   const flags = {
     germany: p.loadImage("germany.png"),
@@ -36,7 +38,8 @@ const sketch = (p: p5) => {
   let currentFlag = flags.germany;
   let selectedSceneName = localStorage.getItem("selectedScene") || "sceneA";
   if (!(selectedSceneName in scenes)) selectedSceneName = "sceneA";
-  let currentScene: Collider[] = scenes[selectedSceneName as keyof typeof scenes];
+  let currentScene: Collider[] =
+    scenes[selectedSceneName as keyof typeof scenes];
   let panel: QuickSettings;
   let showGrid = false;
   let edgeCollision = true;
@@ -56,15 +59,13 @@ const sketch = (p: p5) => {
         currentFlag = flags[data.value as keyof typeof flags];
       },
       onScene: function (data: { value: any }) {
+        selectedSceneName = data.value;
+        localStorage.setItem("selectedScene", data.value);
+        currentScene = scenes[selectedSceneName as keyof typeof scenes];
 
-          selectedSceneName = data.value;
-          localStorage.setItem("selectedScene", data.value);
-          currentScene = scenes[selectedSceneName as keyof typeof scenes];
-
-          const newGrid = generateGridXZ(GRID_COLS, GRID_ROWS, false);
-          points = newGrid.points;
-          edges = newGrid.edges;
-
+        const newGrid = generateGridXZ(GRID_COLS, GRID_ROWS, false);
+        points = newGrid.points;
+        edges = newGrid.edges;
       },
       onWind: function (value: any) {
         if (shoudlGuiUpdate < GUI_fps) return;
@@ -98,17 +99,17 @@ const sketch = (p: p5) => {
 
     {
       panel = QuickSettings.create(20, 20, "test")
-          .setDraggable(true)
-          .addDropDown("flag", Object.keys(flags), controller.onFlag)
-          .addDropDown("Scene", Object.keys(scenes), controller.onScene)
-          .addButton("start recording", controller.onRecordStart)
-          .addBoolean("Paused", false, controller.onPause)
-          .addButton("stop recording", controller.onRecordStop)
-          //title, min, max, value, step, callback
-          .addRange("Gravity", 0.05, 0.3, 0.05, 0.05, controller.onGravity)
-          .addRange("Wind", 0, 0.5, 0.0, 0.005, controller.onWind)
-          .addBoolean("showGrid", false, controller.onGrid)
-          .addBoolean("EdgeCollision", true, controller.onEdgeCollision);
+        .setDraggable(true)
+        .addDropDown("flag", Object.keys(flags), controller.onFlag)
+        .addDropDown("Scene", Object.keys(scenes), controller.onScene)
+        .addButton("start recording", controller.onRecordStart)
+        .addBoolean("Paused", false, controller.onPause)
+        .addButton("stop recording", controller.onRecordStop)
+        //title, min, max, value, step, callback
+        .addRange("Gravity", 0.05, 0.3, 0.05, 0.05, controller.onGravity)
+        .addRange("Wind", 0, 0.5, 0.0, 0.005, controller.onWind)
+        .addBoolean("showGrid", false, controller.onGrid)
+        .addBoolean("EdgeCollision", true, controller.onEdgeCollision);
     }
 
     const { recorder } = initializeRecorder(canvas, 30, exportVideo);
@@ -126,8 +127,8 @@ const sketch = (p: p5) => {
     gravity.set(0, gravityValue, 0);
     wind.set(
       windValue,
-        windValue > 0 ? p.random(0, 0) : 0,
-        windValue > 0 ? p.random(0, 0) : 0
+      windValue > 0 ? p.random(0, 0) : 0,
+      windValue > 0 ? p.random(0, 0) : 0
     );
 
     {
@@ -135,21 +136,17 @@ const sketch = (p: p5) => {
       if (!paused) {
         const subSteps = 5;
         for (let step = 0; step < subSteps; step++) {
-
-          for (const edge of edges){
-
+          for (const edge of edges) {
             applySpringForce(edge.PointA, edge.PointB, {
               restLength: edge.restLength,
               springConstant: springConstant / subSteps,
             });
           }
 
-          for (const point of points){
-
+          for (const point of points) {
             point.inside = false;
 
-            if(!point.locked){
-
+            if (!point.locked) {
               point.applyForce(gravity.copy().div(subSteps));
               point.applyForce(wind.copy().div(subSteps));
 
@@ -158,13 +155,10 @@ const sketch = (p: p5) => {
               handleCollisions(point, currentScene);
             }
           }
-          if(edgeCollision) {
+          if (edgeCollision) {
             for (const edge of edges) {
-
               for (const collider of currentScene) {
-
                 if (collider instanceof BoxCollider) {
-
                   collider.resolveEdgeCollision(edge.PointA, edge.PointB);
                 }
               }
@@ -181,9 +175,9 @@ const sketch = (p: p5) => {
     } else {
       drawClothIn3D(p, points, GRID_COLS, GRID_ROWS);
     }
-   for (const collider of currentScene){
-     collider.draw(p);
-   }
+    for (const collider of currentScene) {
+      collider.draw(p);
+    }
   };
 };
 

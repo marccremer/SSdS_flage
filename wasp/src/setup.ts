@@ -4,11 +4,11 @@ import { Point } from "./Point";
 
 export const generateGrid = (
   cols: number,
-  rows: number
+  rows: number,
+  spacing = 20
 ): { points: Point[]; edges: Edge[] } => {
   const points: Point[] = [];
   const edges: Edge[] = [];
-  const spacing =20;
 
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
@@ -59,18 +59,15 @@ export const generateGrid = (
 };
 
 export const generateGridXZ = (
-    cols: number,
-    rows: number,
-    soft: Boolean
-): {points: Point[]; edges: Edge[]} => {
-
+  cols: number,
+  rows: number,
+  spacing = 3
+): { points: Point[]; edges: Edge[] } => {
   const points: Point[] = [];
   const edges: Edge[] = [];
-  const spacing = 3;
 
-  for(let row = 0; row < rows; row++){
-    for(let col = 0; col < cols ; col++){
-
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
       const xPos = col * spacing;
       const zPos = row * spacing;
       const yPos = 0;
@@ -95,7 +92,7 @@ export const generateGridXZ = (
         edges.push(edge);
 
         //Diagonale Verbindungen
-        if(!soft) {
+        if (!soft) {
           if (col > 0) {
             const topLeftPoint = points[(row - 1) * cols + (col - 1)];
             const diagEdge = new Edge(point, topLeftPoint);
@@ -109,11 +106,10 @@ export const generateGridXZ = (
             diagEdge.restLength = point.pos.dist(topRightPoint.pos);
             edges.push(diagEdge);
           }
-
         }
       }
     }
   }
 
-  return {points, edges};
+  return { points, edges };
 };
