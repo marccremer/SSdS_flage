@@ -60,7 +60,8 @@ export const generateGrid = (
 
 export const generateGridXZ = (
     cols: number,
-    rows: number
+    rows: number,
+    soft: Boolean
 ): {points: Point[]; edges: Edge[]} => {
 
   const points: Point[] = [];
@@ -78,6 +79,7 @@ export const generateGridXZ = (
 
       points.push(point);
 
+      //Horizontale Verbindung
       if (col > 0) {
         const leftPoint = points[points.length - 2];
         const edge = new Edge(point, leftPoint);
@@ -85,24 +87,29 @@ export const generateGridXZ = (
         edges.push(edge);
       }
 
+      //Vertikale Verbindung
       if (row > 0) {
         const abovePoint = points[(row - 1) * cols + col];
         const edge = new Edge(point, abovePoint);
         edge.restLength = point.pos.dist(abovePoint.pos);
         edges.push(edge);
 
-        if (col > 0) {
-          const topLeftPoint = points[(row - 1) * cols + (col - 1)];
-          const diagEdge = new Edge(point, topLeftPoint);
-          diagEdge.restLength = point.pos.dist(topLeftPoint.pos);
-          edges.push(diagEdge);
-        }
+        //Diagonale Verbindungen
+        if(!soft) {
+          if (col > 0) {
+            const topLeftPoint = points[(row - 1) * cols + (col - 1)];
+            const diagEdge = new Edge(point, topLeftPoint);
+            diagEdge.restLength = point.pos.dist(topLeftPoint.pos);
+            edges.push(diagEdge);
+          }
 
-        if (col < cols - 1) {
-          const topRightPoint = points[(row - 1) * cols + (col + 1)];
-          const diagEdge = new Edge(point, topRightPoint);
-          diagEdge.restLength = point.pos.dist(topRightPoint.pos);
-          edges.push(diagEdge);
+          if (col < cols - 1) {
+            const topRightPoint = points[(row - 1) * cols + (col + 1)];
+            const diagEdge = new Edge(point, topRightPoint);
+            diagEdge.restLength = point.pos.dist(topRightPoint.pos);
+            edges.push(diagEdge);
+          }
+
         }
       }
     }

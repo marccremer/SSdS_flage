@@ -10,10 +10,9 @@ import {
   Collider,
   handleCollisions,
   BoxCollider,
-  SphereCollider,
-  ConeCollider
 } from "./collision.ts";
 import { Box } from "./Box.ts";
+import {scenes} from "./scenes.ts";
 const width = window.innerWidth;
 const height = window.innerHeight;
 
@@ -27,7 +26,7 @@ var easycam;
 
 const sketch = (p: p5) => {
   const b = p.color(255, 255, 255);
-  let { edges, points } = generateGridXZ(GRID_COLS, GRID_ROWS);
+  let { edges, points } = generateGridXZ(GRID_COLS, GRID_ROWS, true);
   let canvas: HTMLCanvasElement;
   const flags = {
     germany: p.loadImage("germany.png"),
@@ -35,17 +34,14 @@ const sketch = (p: p5) => {
     morocco: p.loadImage("morocco.png"),
   };
   let currentFlag = flags.germany;
+  let selectedSceneName = localStorage.getItem("selectedScene") || "sceneA";
+  if (!(selectedSceneName in scenes)) selectedSceneName = "sceneA";
+  let currentScene: Collider[] = scenes[selectedSceneName as keyof typeof scenes];
   let panel: QuickSettings;
   let showGrid = false;
+  let edgeCollision = true;
   let paused = false;
 
-
-  const colliders: Collider[] = [
-    //new SphereCollider(new p5.Vector(150, 250, 20), 50),
-    new BoxCollider(new p5.Vector(100,200,20), new p5.Vector(100, 100, 100)),
-    new BoxCollider(new p5.Vector(0, 600, 0), new p5.Vector(3000, 10, 5000)),
-    new ConeCollider(new p5.Vector(170, 250, 40), 90,100)
-  ]
   let shoudlGuiUpdate = 0;
   const GUI_fps = 60;
   p.setup = () => {
@@ -58,6 +54,17 @@ const sketch = (p: p5) => {
     var controller = {
       onFlag: function (data: { value: any }) {
         currentFlag = flags[data.value as keyof typeof flags];
+      },
+      onScene: function (data: { value: any }) {
+
+          selectedSceneName = data.value;
+          localStorage.setItem("selectedScene", data.value);
+          currentScene = scenes[selectedSceneName as keyof typeof scenes];
+
+          const newGrid = generateGridXZ(GRID_COLS, GRID_ROWS, false);
+          points = newGrid.points;
+          edges = newGrid.edges;
+
       },
       onWind: function (value: any) {
         if (shoudlGuiUpdate < GUI_fps) return;
@@ -73,7 +80,9 @@ const sketch = (p: p5) => {
       onGrid: (value: any) => {
         showGrid = !!value;
       },
-
+      onEdgeCollision: (value: any) => {
+        edgeCollision = !!value;
+      },
       onRecordStart: function () {
         assertNotNull(recorder, "recorder");
         recorder.start();
@@ -89,15 +98,17 @@ const sketch = (p: p5) => {
 
     {
       panel = QuickSettings.create(20, 20, "test")
-        .setDraggable(true)
-        .addDropDown("flag", Object.keys(flags), controller.onFlag)
-        .addButton("start recording", controller.onRecordStart)
-        .addBoolean("Paused", false, controller.onPause)
-        .addButton("stop recording", controller.onRecordStop)
-        //title, min, max, value, step, callback
-        .addRange("Gravity", 0.05, 0.3, 0.05, 0.05, controller.onGravity)
-        .addRange("Wind", 0, 0.5, 0.0, 0.005, controller.onWind)
-        .addBoolean("showGrid", false, controller.onGrid);
+          .setDraggable(true)
+          .addDropDown("flag", Object.keys(flags), controller.onFlag)
+          .addDropDown("Scene", Object.keys(scenes), controller.onScene)
+          .addButton("start recording", controller.onRecordStart)
+          .addBoolean("Paused", false, controller.onPause)
+          .addButton("stop recording", controller.onRecordStop)
+          //title, min, max, value, step, callback
+          .addRange("Gravity", 0.05, 0.3, 0.05, 0.05, controller.onGravity)
+          .addRange("Wind", 0, 0.5, 0.0, 0.005, controller.onWind)
+          .addBoolean("showGrid", false, controller.onGrid)
+          .addBoolean("EdgeCollision", true, controller.onEdgeCollision);
     }
 
     const { recorder } = initializeRecorder(canvas, 30, exportVideo);
@@ -115,8 +126,8 @@ const sketch = (p: p5) => {
     gravity.set(0, gravityValue, 0);
     wind.set(
       windValue,
-        windValue > 0 ? p.random(-0.1, 0.1) : 0,
-        windValue > 0 ? p.random(-0.5, 0.5) : 0
+        windValue > 0 ? p.random(0, 0) : 0,
+        windValue > 0 ? p.random(0, 0) : 0
     );
 
     {
@@ -144,17 +155,18 @@ const sketch = (p: p5) => {
 
               point.update();
 
-              handleCollisions(point, colliders);
+              handleCollisions(point, currentScene);
             }
           }
+          if(edgeCollision) {
+            for (const edge of edges) {
 
-          for(const edge of edges){
+              for (const collider of currentScene) {
 
-            for(const collider of colliders){
+                if (collider instanceof BoxCollider) {
 
-              if(collider instanceof BoxCollider){
-
-                collider.resolveEdgeCollision(edge.PointA, edge.PointB);
+                  collider.resolveEdgeCollision(edge.PointA, edge.PointB);
+                }
               }
             }
           }
@@ -169,7 +181,7 @@ const sketch = (p: p5) => {
     } else {
       drawClothIn3D(p, points, GRID_COLS, GRID_ROWS);
     }
-   for (const collider of colliders){
+   for (const collider of currentScene){
      collider.draw(p);
    }
   };

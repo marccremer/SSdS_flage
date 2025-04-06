@@ -97,6 +97,68 @@ export class ConeCollider implements Collider {
   }
 }
 
+export class CylinderCollider implements Collider {
+  origin: p5.Vector;
+  radius: number;
+  height: number;
+
+  constructor(origin: p5.Vector, radius: number, height: number) {
+    this.origin = origin.copy();
+    this.radius = radius;
+    this.height = height;
+  }
+
+  checkCollision(point: Point): boolean {
+    const next = point.nextPoint();
+    const local = p5.Vector.sub(next, this.origin);
+
+    const z = local.z;
+    if (z < 0 || z > this.height) return false;
+
+    const radial = local.copy();
+    radial.z = 0;
+    return radial.magSq() <= this.radius * this.radius;
+  }
+
+  resolveCollision(point: Point): void {
+    const next = point.nextPoint();
+    const local = p5.Vector.sub(next, this.origin);
+    const z = local.z;
+
+    if (z < 0 || z > this.height) return;
+
+    const radial = local.copy();
+    radial.z = 0;
+    const distSq = radial.magSq();
+    if (distSq > this.radius * this.radius) return;
+
+    const normal = radial.copy().normalize();
+    if (normal.magSq() === 0) return;
+
+    const vDotN = point.velocity.dot(normal);
+    const normalPart = normal.copy().mult(vDotN);
+    point.velocity.sub(normalPart);
+
+    const dist = Math.sqrt(distSq);
+    const penetration = this.radius - dist;
+    const safePenetration = penetration - 0.001;
+
+    if (safePenetration > 0) {
+      point.pos.add(normal.copy().mult(safePenetration));
+    }
+  }
+
+  draw(p: p5): void {
+    p.push();
+    p.translate(this.origin.x, this.origin.y, this.origin.z + this.height / 2);
+    p.rotateX(p.HALF_PI);
+    p.fill('blue');
+    p.noStroke();
+    p.cylinder(this.radius, this.height);
+    p.pop();
+  }
+}
+
 export class BoxCollider implements Collider {
   min: p5.Vector;
   max: p5.Vector;
