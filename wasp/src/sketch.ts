@@ -1,19 +1,10 @@
 import p5 from "p5";
-import { Point } from "./Point";
-import { Edge } from "./Edge";
-import { assertNotNull, createStyledButton } from "./utils";
+import { assertNotNull } from "./utils";
 import { applySpringForce } from "./spring";
 import { exportVideo, initializeRecorder } from "./recording";
-import { generateGrid, generateGridXZ } from "./setup";
-import { applyImageTextureToShape, drawClothIn3D } from "./proto";
-import {
-  Collider,
-  handleCollisions,
-  BoxCollider,
-  SphereCollider,
-  ConeCollider,
-} from "./collision.ts";
-import { Box } from "./Box.ts";
+import { generateGridXZ } from "./setup";
+import { drawClothIn3D } from "./proto";
+import { Collider, handleCollisions, BoxCollider } from "./collision.ts";
 import { scenes } from "./scenes.ts";
 const width = window.innerWidth;
 const height = window.innerHeight;

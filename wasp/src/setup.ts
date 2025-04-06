@@ -61,7 +61,8 @@ export const generateGrid = (
 export const generateGridXZ = (
   cols: number,
   rows: number,
-  spacing = 3
+  spacing = 3,
+  soft = false
 ): { points: Point[]; edges: Edge[] } => {
   const points: Point[] = [];
   const edges: Edge[] = [];
