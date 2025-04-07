@@ -127,7 +127,6 @@ export class CylinderCollider implements Collider {
     const localPosition = p5.Vector.sub(nextPosition, this.origin);
     const z = localPosition.z;
 
-
     if (z < 0 || z > this.height) return; //Überprüfung, ob der Punkt innerhalb der Höhe des Zylinders ist
 
     const radialPosition = localPosition.copy();
@@ -146,7 +145,8 @@ export class CylinderCollider implements Collider {
     const penetrationDepth = this.radius - distFromCenter; //Berechne die Tiefe der Penetration
     const safePenetrationDepth = penetrationDepth - 0.001; //Sicherheitsabstand um "Kleben" zu vermeiden
 
-    if (safePenetrationDepth > 0) { //Wenn Penetration stattgefunden hat, schiebe den Punkt zurück
+    if (safePenetrationDepth > 0) {
+      //Wenn Penetration stattgefunden hat, schiebe den Punkt zurück
       movingPoint.pos.add(collisionNormal.copy().mult(safePenetrationDepth));
     }
   }
@@ -155,7 +155,7 @@ export class CylinderCollider implements Collider {
     p.push();
     p.translate(this.origin.x, this.origin.y, this.origin.z + this.height / 2);
     p.rotateX(p.HALF_PI);
-    p.fill('blue');
+    p.fill("blue");
     p.noStroke();
     p.cylinder(this.radius, this.height);
     p.pop();
@@ -163,7 +163,13 @@ export class CylinderCollider implements Collider {
 }
 
 export class BoxCollider implements Collider {
+  /**
+   * Untere linke vordere Ecke
+   */
   min: p5.Vector; // Kleinster Punkt (Minimalkoordinaten) der Box
+  /**
+   * Obere rechte hintere Ecke
+   */
   max: p5.Vector; // Größter Punkt (Maximalkoordinaten) der Box
 
   constructor(public center: p5.Vector, public size: p5.Vector) {
@@ -175,44 +181,42 @@ export class BoxCollider implements Collider {
     this.max = p5.Vector.add(this.center.copy(), this.size.copy().div(2)); // Obere rechte hintere Ecke
 
     this.min.set(
-        this.center.x - this.size.x / 2,
-        this.center.y - this.size.y / 2,
-        this.center.z - this.size.z / 2
+      this.center.x - this.size.x / 2,
+      this.center.y - this.size.y / 2,
+      this.center.z - this.size.z / 2
     );
 
     this.max.set(
-        this.center.x + this.size.x / 2,
-        this.center.y + this.size.y / 2,
-        this.center.z + this.size.z / 2
+      this.center.x + this.size.x / 2,
+      this.center.y + this.size.y / 2,
+      this.center.z + this.size.z / 2
     );
   }
-
 
   checkCollision(point: Point): boolean {
     const pos = point.pos;
     return (
-        pos.x >= this.min.x &&
-        pos.x <= this.max.x &&
-        pos.y >= this.min.y &&
-        pos.y <= this.max.y &&
-        pos.z >= this.min.z &&
-        pos.z <= this.max.z
+      pos.x >= this.min.x &&
+      pos.x <= this.max.x &&
+      pos.y >= this.min.y &&
+      pos.y <= this.max.y &&
+      pos.z >= this.min.z &&
+      pos.z <= this.max.z
     );
   }
 
-
   resolveCollision(point: Point) {
     const overlapX = Math.min(
-        this.max.x - point.pos.x,
-        point.pos.x - this.min.x
+      this.max.x - point.pos.x,
+      point.pos.x - this.min.x
     );
     const overlapY = Math.min(
-        this.max.y - point.pos.y,
-        point.pos.y - this.min.y
+      this.max.y - point.pos.y,
+      point.pos.y - this.min.y
     );
     const overlapZ = Math.min(
-        this.max.z - point.pos.z,
-        point.pos.z - this.min.z
+      this.max.z - point.pos.z,
+      point.pos.z - this.min.z
     );
 
     // Bestimme, in welcher Achse die größte Überlappung ist und korrigiere den Punkt
@@ -240,8 +244,8 @@ export class BoxCollider implements Collider {
 
   // Überprüft, ob eine Linie mit der Box kollidiert
   checkEdgeCollision(
-      start: p5.Vector,
-      end: p5.Vector
+    start: p5.Vector,
+    end: p5.Vector
   ): { collides: boolean; normal?: p5.Vector; point?: p5.Vector } {
     const dir = p5.Vector.sub(end, start);
     let xMin = 0.0;
@@ -280,8 +284,8 @@ export class BoxCollider implements Collider {
     // Berechnung des Kollisionspunkts und Normalen
     const collisionPoint = p5.Vector.add(start, dir.mult(xMin));
     const normal = collisionAxis
-        ? this.calculateCollisionNormal(collisionPoint, collisionAxis) // Berechnung der Kollisionsnormalen
-        : new p5.Vector(0, 0, 0);
+      ? this.calculateCollisionNormal(collisionPoint, collisionAxis) // Berechnung der Kollisionsnormalen
+      : new p5.Vector(0, 0, 0);
 
     return {
       collides: true,
@@ -292,8 +296,8 @@ export class BoxCollider implements Collider {
 
   // Berechnet die Normale an der Kollisionsstelle basierend auf der Achse
   private calculateCollisionNormal(
-      point: p5.Vector,
-      collisionAxis: "x" | "y" | "z"
+    point: p5.Vector,
+    collisionAxis: "x" | "y" | "z"
   ): p5.Vector {
     const normal = new p5.Vector();
     const axisCenter = this.center[collisionAxis]; // Mittelpunkt entlang der Kollisionsachse
@@ -358,7 +362,8 @@ export function handleSphereCollisionCCD(
   if (distFromSphereCenter < sphereRadius) {
     const normal = p5.Vector.sub(oldPos, sphereCenter).normalize(); //Berechne die Normale zur Oberfläche der Kugel
     const penetrationDepth = sphereRadius - distFromSphereCenter;
-    if (penetrationDepth > 0.001) { //Ab welcher tiefe soll korrigiert werden
+    if (penetrationDepth > 0.001) {
+      //Ab welcher tiefe soll korrigiert werden
       point.pos.add(normal.copy().mult(penetrationDepth + 0.001)); //Verschiebe den Punkt nach außen
       point.velocity.mult(0.95);
     }
@@ -407,7 +412,8 @@ function intersectMovingPointWithSphere(
   //Berechne die erforderlichen Werte für die quadratische Gleichung
   const a = direction.dot(direction); //a ist der Betrag des Richtungsvektors
   const b = 2 * offsetFromSphereCenter.dot(direction); //b für die quadratische Gleichung
-  const c = offsetFromSphereCenter.dot(offsetFromSphereCenter) - radius * radius; //c für die quadratische Gleichung
+  const c =
+    offsetFromSphereCenter.dot(offsetFromSphereCenter) - radius * radius; //c für die quadratische Gleichung
 
   const discriminant = b * b - 4 * a * c; //Berechne den Diskriminanten der quadratischen Gleichung
 
@@ -423,7 +429,8 @@ function intersectMovingPointWithSphere(
   let minimumCollisionTime = Infinity;
 
   for (const x of [x1, x2]) {
-    if (x >= 0 && x <= 1 && x < minimumCollisionTime) { //x ist gültig, wenn es zwischen 0 und 1 liegt, was bedeutet, dass der Schnittpunkt innerhalb der Bewegung liegt
+    if (x >= 0 && x <= 1 && x < minimumCollisionTime) {
+      //x ist gültig, wenn es zwischen 0 und 1 liegt, was bedeutet, dass der Schnittpunkt innerhalb der Bewegung liegt
       minimumCollisionTime = x;
     }
   }
