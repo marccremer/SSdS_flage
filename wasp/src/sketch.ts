@@ -27,10 +27,9 @@ const sketch = (p: p5) => {
     morocco: p.loadImage("morocco.png"),
   };
   let currentFlag = flags.germany;
-  let selectedSceneName = localStorage.getItem("selectedScene") || "sceneA";
-  if (!(selectedSceneName in scenes)) selectedSceneName = "sceneA";
-  let currentScene: Collider[] =
-    scenes[selectedSceneName as keyof typeof scenes];
+  let selectedSceneName = localStorage.getItem("selectedScene");
+  if (!(selectedSceneName && selectedSceneName in scenes)) selectedSceneName = "sceneA";
+  let currentScene: Collider[] = scenes[selectedSceneName as keyof typeof scenes];
   let panel: QuickSettings;
   let showGrid = false;
   let edgeCollision = true;
@@ -53,8 +52,7 @@ const sketch = (p: p5) => {
         selectedSceneName = data.value;
         localStorage.setItem("selectedScene", data.value);
         currentScene = scenes[selectedSceneName as keyof typeof scenes];
-
-        const newGrid = generateGridXZ(GRID_COLS, GRID_ROWS, false);
+        const newGrid = generateGridXZ(GRID_COLS, GRID_ROWS);
         points = newGrid.points;
         edges = newGrid.edges;
       },
