@@ -89,14 +89,13 @@ const sketch = (p: p5) => {
     {
       panel = QuickSettings.create(20, 20, "test")
         .setDraggable(true)
-        .addDropDown("flag", Object.keys(flags), controller.onFlag)
         .addDropDown("Scene", Object.keys(scenes), controller.onScene)
         .addButton("start recording", controller.onRecordStart)
-        .addBoolean("Paused", false, controller.onPause)
         .addButton("stop recording", controller.onRecordStop)
         //title, min, max, value, step, callback
-        .addRange("Gravity", 0.05, 0.3, 0.05, 0.05, controller.onGravity)
-        .addRange("Wind", 0, 0.5, 0.0, 0.005, controller.onWind)
+        .addRange("Gravity", 0.05, 0.03, 0.05, 0.05, controller.onGravity)
+        .addRange("Wind", 0, 0.5, 0.001, 0.005, controller.onWind)
+        .addBoolean("Paused", false, controller.onPause)
         .addBoolean("showGrid", false, controller.onGrid)
         .addBoolean("EdgeCollision", true, controller.onEdgeCollision);
     }

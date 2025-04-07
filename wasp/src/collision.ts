@@ -242,7 +242,12 @@ export class BoxCollider implements Collider {
     p.pop();
   }
 
-  // Überprüft, ob eine Linie mit der Box kollidiert
+  /**
+   * Überprüft, ob eine Linie mit der Box kollidiert 
+   * @param start 
+   * @param end 
+   * @returns 
+   */
   checkEdgeCollision(
     start: p5.Vector,
     end: p5.Vector
@@ -272,7 +277,7 @@ export class BoxCollider implements Collider {
         xMin = x1; // Aktualisiere xMin, wenn x1 größer ist
         collisionAxis = axis; // Setze die Achse der Kollision
       }
-
+     
       xMax = Math.min(xMax, x2); // Aktualisiere xMax mit dem kleineren von xMax und x2
 
       if (xMin > xMax) return { collides: false }; // Wenn xMin größer als xMax ist, keine Kollision
