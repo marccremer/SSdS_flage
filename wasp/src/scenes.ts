@@ -21,4 +21,5 @@ export const scenes: Record<string, Collider[]> = {
   ],
 
   sceneC: [new SphereCollider(new p5.Vector(200, 250, 20), 70)],
+  onlyCone: [new ConeCollider(new p5.Vector(150, 200, 70), 40, 50)],
 };
