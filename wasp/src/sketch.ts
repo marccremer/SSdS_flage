@@ -29,9 +29,13 @@ const sketch = (p: p5) => {
   let selectedSceneName = localStorage.getItem("selectedScene");
   if (!(selectedSceneName && selectedSceneName in scenes))
     selectedSceneName = "sceneA";
-  let currentScene: Collider[] =
-    scenes[selectedSceneName as keyof typeof scenes];
-  let { edges, points } = generateGridXZ(GRID_COLS, GRID_ROWS, 10);
+  let currentScene = scenes[selectedSceneName as keyof typeof scenes];
+  let { edges, points } = generateGridXZ(
+    GRID_COLS,
+    GRID_ROWS,
+    currentScene.spacing,
+    currentScene.soft
+  );
   let panel: QuickSettings;
   let showGrid = false;
   let edgeCollision = true;
@@ -54,7 +58,12 @@ const sketch = (p: p5) => {
         selectedSceneName = data.value;
         localStorage.setItem("selectedScene", data.value);
         currentScene = scenes[selectedSceneName as keyof typeof scenes];
-        const newGrid = generateGridXZ(GRID_COLS, GRID_ROWS);
+        const newGrid = generateGridXZ(
+          GRID_COLS,
+          GRID_ROWS,
+          currentScene.spacing,
+          currentScene.soft
+        );
         points = newGrid.points;
         edges = newGrid.edges;
       },
@@ -143,12 +152,12 @@ const sketch = (p: p5) => {
 
               point.update();
 
-              handleCollisions(point, currentScene);
+              handleCollisions(point, currentScene.collider);
             }
           }
           if (edgeCollision) {
             for (const edge of edges) {
-              for (const collider of currentScene) {
+              for (const collider of currentScene.collider) {
                 if (collider instanceof BoxCollider) {
                   collider.resolveEdgeCollision(edge.PointA, edge.PointB);
                 }
@@ -166,7 +175,7 @@ const sketch = (p: p5) => {
     } else {
       drawClothIn3D(p, points, GRID_COLS, GRID_ROWS);
     }
-    for (const collider of currentScene) {
+    for (const collider of currentScene.collider) {
       collider.draw(p);
     }
   };
