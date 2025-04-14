@@ -26,7 +26,7 @@ const sketch = (p: p5) => {
     morocco: p.loadImage("morocco.png"),
   };
   let currentFlag = flags.germany;
-  let selectedSceneName = localStorage.getItem("selectedScene");
+  let selectedSceneName = localStorage.getItem("selectedScene") || "cylinder_soft";
   if (!(selectedSceneName && selectedSceneName in scenes))
     selectedSceneName = "sphere";
   let currentScene = scenes[selectedSceneName as keyof typeof scenes];
