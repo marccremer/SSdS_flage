@@ -12,8 +12,8 @@ const height = window.innerHeight;
 const GRID_ROWS = 10;
 const GRID_COLS = 20;
 const springConstant = 0.37;
-const gravity = new p5.Vector(0, 0.05, 0);
-const wind = new p5.Vector(0, 0, 0);
+let gravity = new p5.Vector(0, 0.05, 0);
+let wind = new p5.Vector(0, 0, 0);
 declare const QuickSettings: QuickSettings;
 var easycam;
 
@@ -28,17 +28,18 @@ const sketch = (p: p5) => {
   let currentFlag = flags.germany;
   let selectedSceneName = localStorage.getItem("selectedScene");
   if (!(selectedSceneName && selectedSceneName in scenes))
-    selectedSceneName = "sceneA";
+    selectedSceneName = "sphere";
   let currentScene = scenes[selectedSceneName as keyof typeof scenes];
   let { edges, points } = generateGridXZ(
-    GRID_COLS,
-    GRID_ROWS,
-    currentScene.spacing,
-    currentScene.soft
+      currentScene.grid_cols,
+      currentScene.grid_rows,
+      currentScene.spacing,
+      currentScene.soft
   );
+  gravity = currentScene.gravity;
+  wind = currentScene.wind;
   let panel: QuickSettings;
   let showGrid = false;
-  let edgeCollision = true;
   let paused = false;
 
   let shoudlGuiUpdate = 0;
@@ -59,8 +60,8 @@ const sketch = (p: p5) => {
         localStorage.setItem("selectedScene", data.value);
         currentScene = scenes[selectedSceneName as keyof typeof scenes];
         const newGrid = generateGridXZ(
-          GRID_COLS,
-          GRID_ROWS,
+          currentScene.grid_cols,
+          currentScene.grid_rows,
           currentScene.spacing,
           currentScene.soft
         );
@@ -82,7 +83,7 @@ const sketch = (p: p5) => {
         showGrid = !!value;
       },
       onEdgeCollision: (value: any) => {
-        edgeCollision = !!value;
+        currentScene.edgeCollision = !!value;
       },
       onRecordStart: function () {
         assertNotNull(recorder, "recorder");
@@ -106,10 +107,10 @@ const sketch = (p: p5) => {
         .addBoolean("Paused", false, controller.onPause)
         .addButton("stop recording", controller.onRecordStop)
         //title, min, max, value, step, callback
-        .addRange("Gravity", 0.05, 0.3, 0.05, 0.05, controller.onGravity)
-        .addRange("Wind", 0, 0.5, 0.0, 0.005, controller.onWind)
+        .addRange("Gravity", 0.05, 0.3, currentScene.gravity.y, 0.05, controller.onGravity)
+        .addRange("Wind", 0, 0.5, currentScene.wind.x, 0.005, controller.onWind)
         .addBoolean("showGrid", false, controller.onGrid)
-        .addBoolean("EdgeCollision", true, controller.onEdgeCollision);
+        .addBoolean("EdgeCollision", currentScene.edgeCollision, controller.onEdgeCollision);
     }
 
     const { recorder } = initializeRecorder(canvas, 30, exportVideo);
@@ -124,9 +125,9 @@ const sketch = (p: p5) => {
     const gravityValue = panel.getValuesAsJSON()["Gravity"];
     const windValue = panel.getValuesAsJSON()["Wind"];
 
-    gravity.set(0, gravityValue, 0);
+    gravity.set(0, currentScene.gravity.y, 0);
     wind.set(
-      windValue,
+      currentScene.wind.x,
       windValue > 0 ? p.random(0, 0) : 0,
       windValue > 0 ? p.random(0, 0) : 0
     );
@@ -155,7 +156,7 @@ const sketch = (p: p5) => {
               handleCollisions(point, currentScene.collider);
             }
           }
-          if (edgeCollision) {
+          if (currentScene.edgeCollision) {
             for (const edge of edges) {
               for (const collider of currentScene.collider) {
                 if (collider instanceof BoxCollider) {

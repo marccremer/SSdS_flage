@@ -20,8 +20,8 @@ export class SphereCollider implements Collider {
 
   draw(p: p5) {
     p.push();
-    p.stroke(0, 200, 0);
-    p.noFill();
+    p.stroke("blue");
+    p.fill(200,200,200);
     p.translate(this.center.x, this.center.y, this.center.z);
     p.sphere(this.radius);
     p.pop();
@@ -90,6 +90,7 @@ export class ConeCollider implements Collider {
     p.translate(this.origin.x, this.origin.y, this.origin.z);
     p.rotateX(p.PI);
     p.stroke("blue");
+    p.fill(200, 200, 200)
     p.sphere(4); // cone origin
     p.cone(this.baseRadius, this.height, 24, 2);
     p.pop();
@@ -155,8 +156,8 @@ export class CylinderCollider implements Collider {
     p.push();
     p.translate(this.origin.x, this.origin.y, this.origin.z + this.height / 2);
     p.rotateX(p.HALF_PI);
-    p.fill("blue");
-    p.noStroke();
+    p.fill(200, 200, 200);
+    p.stroke("blue");
     p.cylinder(this.radius, this.height);
     p.pop();
   }
@@ -235,7 +236,7 @@ export class BoxCollider implements Collider {
   }
   draw(p: p5) {
     p.push();
-    p.stroke(0, 0, 200);
+    p.stroke("blue");
     p.fill(200, 200, 200);
     p.translate(this.center.x, this.center.y, this.center.z);
     p.box(this.size.x, this.size.y, this.size.z);
