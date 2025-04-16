@@ -4,7 +4,7 @@ import { applySpringForce } from "./spring";
 import { exportVideo, initializeRecorder } from "./recording";
 import { generateGridXZ } from "./setup";
 import { drawClothIn3D } from "./proto";
-import { Collider, handleCollisions, BoxCollider } from "./collision.ts";
+import { handleCollisions, BoxCollider } from "./collision.ts";
 import { scenes } from "./scenes.ts";
 const width = window.innerWidth;
 const height = window.innerHeight;
@@ -15,7 +15,6 @@ const springConstant = 0.37;
 let gravity = new p5.Vector(0, 0.05, 0);
 let wind = new p5.Vector(0, 0, 0);
 declare const QuickSettings: QuickSettings;
-var easycam;
 
 const sketch = (p: p5) => {
   const b = p.color(255, 255, 255);
@@ -26,15 +25,16 @@ const sketch = (p: p5) => {
     morocco: p.loadImage("morocco.png"),
   };
   let currentFlag = flags.germany;
-  let selectedSceneName = localStorage.getItem("selectedScene") || "cylinder_soft";
+  let selectedSceneName =
+    localStorage.getItem("selectedScene") || "cylinder_soft";
   if (!(selectedSceneName && selectedSceneName in scenes))
     selectedSceneName = "sphere";
   let currentScene = scenes[selectedSceneName as keyof typeof scenes];
   let { edges, points } = generateGridXZ(
-      currentScene.grid_cols,
-      currentScene.grid_rows,
-      currentScene.spacing,
-      currentScene.soft
+    currentScene.grid_cols,
+    currentScene.grid_rows,
+    currentScene.spacing,
+    currentScene.soft
   );
   gravity = currentScene.gravity;
   wind = currentScene.wind;
@@ -53,6 +53,7 @@ const sketch = (p: p5) => {
 
     var controller = {
       onFlag: function (data: { value: any }) {
+        currentFlag = currentFlag;
         currentFlag = flags[data.value as keyof typeof flags];
       },
       onScene: function (data: { value: any }) {
@@ -107,10 +108,21 @@ const sketch = (p: p5) => {
         .addBoolean("Paused", false, controller.onPause)
         .addButton("stop recording", controller.onRecordStop)
         //title, min, max, value, step, callback
-        .addRange("Gravity", 0.05, 0.3, currentScene.gravity.y, 0.05, controller.onGravity)
+        .addRange(
+          "Gravity",
+          0.05,
+          0.3,
+          currentScene.gravity.y,
+          0.05,
+          controller.onGravity
+        )
         .addRange("Wind", 0, 0.5, currentScene.wind.x, 0.005, controller.onWind)
         .addBoolean("showGrid", false, controller.onGrid)
-        .addBoolean("EdgeCollision", currentScene.edgeCollision, controller.onEdgeCollision);
+        .addBoolean(
+          "EdgeCollision",
+          currentScene.edgeCollision,
+          controller.onEdgeCollision
+        );
     }
 
     const { recorder } = initializeRecorder(canvas, 30, exportVideo);
@@ -122,7 +134,6 @@ const sketch = (p: p5) => {
     p.background(b);
     p.orbitControl();
     shoudlGuiUpdate += 1;
-    const gravityValue = panel.getValuesAsJSON()["Gravity"];
     const windValue = panel.getValuesAsJSON()["Wind"];
 
     gravity.set(0, currentScene.gravity.y, 0);

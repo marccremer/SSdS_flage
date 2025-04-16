@@ -1,6 +1,5 @@
 import p5 from "p5";
 import { Point } from "./Point";
-import { Edge } from "./Edge";
 
 export function applyImageTextureToShape(
   points: Point[],
@@ -53,6 +52,7 @@ function to2DGrid<T>(data: T[], columns: number, rows: number): T[][] {
 
     // Fill up the remaining slots with undefined if the slice is smaller than columns
     while (rowSlice.length < columns) {
+      //@ts-expect-error ignore
       rowSlice.push(undefined);
     }
 
@@ -63,10 +63,10 @@ function to2DGrid<T>(data: T[], columns: number, rows: number): T[][] {
 }
 
 export function drawClothIn3D(
-    p: p5,
-    points: Point[],
-    gridCols: number,
-    gridRows: number
+  p: p5,
+  points: Point[],
+  gridCols: number,
+  gridRows: number
 ) {
   // Wir gehen davon aus, dass:
   // - points.length = gridCols * gridRows
@@ -75,7 +75,7 @@ export function drawClothIn3D(
 
   p.push();
   p.noStroke();
-  p.fill('red'); // beliebige Farbe oder Material
+  p.fill("red"); // beliebige Farbe oder Material
 
   p.beginShape(p.TRIANGLES);
 
