@@ -120,10 +120,10 @@ export const scenes: Record<
   //Verschiedene Stoffe
   largeCloth: {
     collider: [
-      new SphereCollider(new p5.Vector(150, 250, 50), 50),
-      new BoxCollider(new p5.Vector(200, 250, 0), new p5.Vector(100, 100, 100)),
-      new CylinderCollider(new p5.Vector(150, 250, -50), 50, 100),
-      new ConeCollider(new p5.Vector(249, 250, 49), 100, 50)
+      new SphereCollider(new p5.Vector(250, 250, 100), 50),
+      new BoxCollider(new p5.Vector(300, 250, 50), new p5.Vector(100, 100, 100)),
+      new CylinderCollider(new p5.Vector(250, 250, 0), 50, 100),
+      new ConeCollider(new p5.Vector(349, 250, 99), 100, 50)
     ],
     grid_rows: 20,
     grid_cols: 40,
